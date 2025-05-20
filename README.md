@@ -1,4 +1,4 @@
-# 🎨 ChangeColorApp
+# 🎨 Test_app
 
 Une simple application Flutter dont le but est de **changer la couleur de l'écran à chaque clic**. C'est un projet minimaliste pour apprendre les bases de Flutter, comme les interactions utilisateur et la mise à jour de l'état (`setState`).
 
@@ -29,6 +29,6 @@ Assurez-vous d'avoir installé :
 Dans votre terminal :
 
 ```bash
-git clone https://github.com/votre-utilisateur/change_color_app.git
-cd change_color_app
+git clone https://github.com/johnwaia/test_app.git
+cd test_app
 flutter pub get
