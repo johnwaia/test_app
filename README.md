@@ -1,20 +1,34 @@
-# test_app
-<<<<<<< HEAD
-Teste pour création appliction mobile
-=======
+# 🎨 ChangeColorApp
 
-A new Flutter project.
+Une simple application Flutter dont le but est de **changer la couleur de l'écran à chaque clic**. C'est un projet minimaliste pour apprendre les bases de Flutter, comme les interactions utilisateur et la mise à jour de l'état (`setState`).
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🖼️ Fonctionnalité
 
-A few resources to get you started if this is your first Flutter project:
+- À chaque clic sur l'écran, une **nouvelle couleur aléatoire** est appliquée en arrière-plan.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
->>>>>>> c0f7568 (Initial commit: basic color changing Flutter app)
+## 🚀 Lancer le projet
+
+### 1. 📦 Prérequis
+
+Assurez-vous d'avoir installé :
+
+- [Flutter SDK](https://docs.flutter.dev/get-started/install)
+- [Visual Studio Code](https://code.visualstudio.com/)
+- L'extension **Flutter** (inclut Dart) dans VS Code
+- [Android Studio](https://developer.android.com/studio) (uniquement pour le SDK Android, même si vous utilisez VS Code)
+- Un émulateur Android **ou** un appareil physique connecté (mode développeur activé)
+
+---
+
+### 2. 🔧 Installation
+
+Dans votre terminal :
+
+```bash
+git clone https://github.com/votre-utilisateur/change_color_app.git
+cd change_color_app
+flutter pub get
