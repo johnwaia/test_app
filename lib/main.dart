@@ -4,16 +4,17 @@ import 'dart:math';
 void main() => runApp(ChangeColorApp());
 
 class ChangeColorApp extends StatelessWidget {
+  const ChangeColorApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Color Tap App',
-      home: ColorChangeScreen(),
-    );
+    return MaterialApp(title: 'Color Tap App', home: ColorChangeScreen());
   }
 }
 
 class ColorChangeScreen extends StatefulWidget {
+  const ColorChangeScreen({super.key});
+
   @override
   _ColorChangeScreenState createState() => _ColorChangeScreenState();
 }
