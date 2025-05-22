@@ -4,7 +4,6 @@ import 'constants/strings.dart';
 import 'views/user_id_input_view.dart';
 import 'views/home_page.dart';
 import 'services/schedule_service.dart';
-import 'models/ics_event.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 class MyApp extends StatelessWidget {

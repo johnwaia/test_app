@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:icalendar_parser/icalendar_parser.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -7,6 +8,15 @@ class ScheduleService {
   final http.Client client;
 
   ScheduleService(this.client);
+
+  // Fonction pour corriger les accents mal encodés
+  String cleanAccents(String value) {
+    return value
+        .replaceAll('Ã©', 'é')
+        .replaceAll('Ã¨', 'è')
+        .replaceAll('Ã', 'à')
+        .replaceAll('Ã´', 'ô');
+  }
 
   Future<List<IcsEvent>> fetchSchedule(
     String userId,
@@ -21,32 +31,38 @@ class ScheduleService {
       throw Exception("Erreur HTTP ${response.statusCode}");
     }
 
-    final calendar = ICalendar.fromString(response.body);
+    final contentType = response.headers['content-type'] ?? '';
+    String decodedBody;
+
+    if (contentType.toLowerCase().contains('charset=utf-8')) {
+      decodedBody = utf8.decode(response.bodyBytes);
+    } else {
+      decodedBody = latin1.decode(response.bodyBytes);
+    }
+
+    final calendar = ICalendar.fromString(decodedBody);
     final allEvents =
         calendar.data
             .where((e) => e['type'] == 'VEVENT')
-            .map((e) => IcsEvent.fromJson(e, tzLocation))
+            .map((e) {
+              // Créer un IcsEvent "à la volée" puis nettoyer ses champs texte
+              final event = IcsEvent.fromJson(e, tzLocation);
+              return IcsEvent(
+                summary:
+                    event.summary != null ? cleanAccents(event.summary!) : null,
+                description:
+                    event.description != null
+                        ? cleanAccents(event.description!)
+                        : null,
+                start: event.start,
+                end: event.end,
+              );
+            })
+            .where((event) => event.start != null)
             .toList();
 
-    // Calculer le début et la fin de la semaine en cours (lundi à dimanche)
-    final now = tz.TZDateTime.now(tzLocation);
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1)); // lundi
-    final endOfWeek = startOfWeek.add(
-      const Duration(days: 7),
-    ); // lundi prochain
+    allEvents.sort((a, b) => a.start!.compareTo(b.start!));
 
-    // Filtrer les événements dont start est dans cette plage
-    final eventsOfWeek =
-        allEvents.where((event) {
-          final start = event.start;
-          if (start == null) return false;
-          final startLocal = tz.TZDateTime.from(start, tzLocation);
-          return startLocal.isAfter(
-                startOfWeek.subtract(const Duration(seconds: 1)),
-              ) &&
-              startLocal.isBefore(endOfWeek);
-        }).toList();
-
-    return eventsOfWeek;
+    return allEvents;
   }
 }
