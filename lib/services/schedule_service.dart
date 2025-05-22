@@ -41,11 +41,11 @@ class ScheduleService {
     }
 
     final calendar = ICalendar.fromString(decodedBody);
+
     final allEvents =
         calendar.data
             .where((e) => e['type'] == 'VEVENT')
             .map((e) {
-              // Créer un IcsEvent "à la volée" puis nettoyer ses champs texte
               final event = IcsEvent.fromJson(e, tzLocation);
               return IcsEvent(
                 summary:
@@ -56,6 +56,9 @@ class ScheduleService {
                         : null,
                 start: event.start,
                 end: event.end,
+                room: event.room != null ? cleanAccents(event.room!) : null,
+                teacher:
+                    event.teacher != null ? cleanAccents(event.teacher!) : null,
               );
             })
             .where((event) => event.start != null)

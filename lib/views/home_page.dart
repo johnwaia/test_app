@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
-// Gardé si vous prévoyez de l'utiliser ici plus tard
 import 'package:intl/intl.dart';
-import 'package:collection/collection.dart'; // Pour groupBy
+import 'package:collection/collection.dart';
 
-// Importations de timezone si nécessaire pour le traitement direct des dates ici,
-// sinon, assurez-vous que les dates dans IcsEvent sont déjà dans le bon fuseau horaire.
-// import 'package:timezone/data/latest.dart' as tzdata;
-// import 'package:timezone/timezone.dart' as tz;
-
-// Supposant que vous l'utiliserez pour charger les événements
 import '../models/ics_event.dart';
 
 const String noEventsText = 'Aucun événement à venir.';
@@ -22,6 +15,65 @@ class HomePage extends StatefulWidget {
 
   @override
   State<HomePage> createState() => _HomePageState();
+}
+
+class EventDetailsPage extends StatelessWidget {
+  final IcsEvent event;
+
+  const EventDetailsPage({super.key, required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    final startTime =
+        event.start != null
+            ? DateFormat('dd MMM yyyy HH:mm', 'fr_FR').format(event.start!)
+            : 'Heure inconnue';
+
+    final endTime =
+        event.end != null
+            ? DateFormat('dd MMM yyyy HH:mm', 'fr_FR').format(event.end!)
+            : 'Heure inconnue';
+
+    final professor =
+        event.teacher?.trim().isNotEmpty == true ? event.teacher! : 'Inconnu';
+    final room =
+        event.room?.trim().isNotEmpty == true
+            ? event.room!
+            : defaultLocationText;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(event.summary ?? 'Détails du cours')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Nom : ${event.summary ?? "Sans titre"}',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Professeur : $professor',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Text('Début : $startTime', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 12),
+            Text('Fin : $endTime', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 12),
+            Text('Salle : $room', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 12),
+            if (event.description != null && event.description!.isNotEmpty)
+              Text(
+                'Description :\n${event.description}',
+                style: const TextStyle(fontSize: 14),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _HomePageState extends State<HomePage>
@@ -39,18 +91,18 @@ class _HomePageState extends State<HomePage>
   @override
   void didUpdateWidget(HomePage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.events != oldWidget.events) {
+    if (!const ListEquality().equals(widget.events, oldWidget.events)) {
       _groupAndSortEvents();
     }
   }
 
   Color _getCourseColor(String summary) {
-    summary = summary.toLowerCase();
-    if (summary.contains('td')) {
+    final s = summary.toLowerCase();
+    if (s.contains('td')) {
       return Colors.green.shade300;
-    } else if (summary.contains('cm')) {
+    } else if (s.contains('cm')) {
       return const Color.fromARGB(255, 113, 180, 234);
-    } else if (summary.contains('tp')) {
+    } else if (s.contains('tp')) {
       return const Color.fromARGB(255, 232, 172, 82);
     } else {
       return Colors.grey.shade300;
@@ -62,17 +114,16 @@ class _HomePageState extends State<HomePage>
       Duration(days: _referenceDate.weekday - 1),
     );
     final daysOfWeek = List.generate(
-      6, // Lundi à Samedi (exclut Dimanche)
+      6,
       (i) => startOfWeek.add(Duration(days: i)),
     );
 
     final grouped = groupBy(
       widget.events.where((e) => e.start != null),
-      (IcsEvent event) => DateFormat('yyyy-MM-dd').format(event.start!),
+      (IcsEvent e) => DateFormat('yyyy-MM-dd').format(e.start!),
     );
 
     final Map<String, List<IcsEvent>> fullWeekEvents = {};
-
     for (var day in daysOfWeek) {
       final key = DateFormat('yyyy-MM-dd').format(day);
       final displayKey = DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(day);
@@ -87,30 +138,8 @@ class _HomePageState extends State<HomePage>
     });
   }
 
-  String _extractRoom(IcsEvent event) {
-    String description = event.description?.toLowerCase() ?? '';
-    String summary = event.summary?.toLowerCase() ?? '';
-    String combinedText =
-        '$summary $description'; // Combiner pour chercher dans les deux
-
-    RegExp sallePattern = RegExp(
-      r'(salle\s*:\s*|lieu\s*:\s*|amphi\s*|td\s+)([a-z0-9\s\-]+)',
-      caseSensitive: false,
-    );
-
-    Match? match = sallePattern.firstMatch(combinedText);
-    if (match != null && match.groupCount >= 2) {
-      // Le groupe 2 devrait contenir le nom de la salle
-      return match.group(2)!.trim().toUpperCase();
-    }
-
-    return defaultLocationText; // Ou event.location si votre parser le remplit
-  }
-
-  @override
   @override
   Widget build(BuildContext context) {
-    // Cas où il n'y a aucun événement
     if (widget.events.isEmpty || _daysWithEvents.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
@@ -127,7 +156,6 @@ class _HomePageState extends State<HomePage>
             preferredSize: const Size.fromHeight(96.0),
             child: Column(
               children: [
-                // Barre de navigation pour changer de semaine
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Row(
@@ -162,8 +190,6 @@ class _HomePageState extends State<HomePage>
                     ],
                   ),
                 ),
-
-                // Onglets pour chaque jour avec événements
                 TabBar(
                   isScrollable: true,
                   tabs:
@@ -179,8 +205,8 @@ class _HomePageState extends State<HomePage>
                               'fr_FR',
                             ).format(parsedDate),
                           );
-                        } catch (e) {
-                          return Tab(text: day); // Fallback si parsing échoue
+                        } catch (_) {
+                          return Tab(text: day);
                         }
                       }).toList(),
                 ),
@@ -193,25 +219,30 @@ class _HomePageState extends State<HomePage>
               _daysWithEvents.map((day) {
                 final eventsForDay = _groupedEvents[day] ?? [];
 
-                // Aucun cours ce jour-là
                 if (eventsForDay.isEmpty) {
                   return Center(
                     child: Text('Pas cours ce ${day.split(' ')[0]}'),
                   );
                 }
 
-                // Liste des événements du jour
                 return ListView.builder(
                   itemCount: eventsForDay.length,
                   itemBuilder: (context, index) {
                     final event = eventsForDay[index];
-                    final room = _extractRoom(event);
+
+                    final room =
+                        event.room?.trim().isNotEmpty == true
+                            ? event.room!
+                            : defaultLocationText;
+                    final professor =
+                        event.teacher?.trim().isNotEmpty == true
+                            ? event.teacher!
+                            : 'Inconnu';
 
                     final startTime =
                         event.start != null
                             ? DateFormat('HH:mm', 'fr_FR').format(event.start!)
                             : 'Heure inconnue';
-
                     final endTime =
                         event.end != null
                             ? DateFormat('HH:mm', 'fr_FR').format(event.end!)
@@ -228,6 +259,40 @@ class _HomePageState extends State<HomePage>
                         vertical: 4.0,
                       ),
                       child: ListTile(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder:
+                                (context) => AlertDialog(
+                                  title: Text(title),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Professeur : $professor'),
+                                      const SizedBox(height: 8),
+                                      Text('Début : $startTime'),
+                                      Text('Fin : $endTime'),
+                                      const SizedBox(height: 8),
+                                      Text('Salle : $room'),
+                                      if (description.isNotEmpty) ...[
+                                        const SizedBox(height: 12),
+                                        const Text('Description :'),
+                                        Text(description),
+                                      ],
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed:
+                                          () => Navigator.of(context).pop(),
+                                      child: const Text('Fermer'),
+                                    ),
+                                  ],
+                                ),
+                          );
+                        },
                         leading: CircleAvatar(
                           backgroundColor:
                               Theme.of(context).colorScheme.primary,
@@ -245,33 +310,10 @@ class _HomePageState extends State<HomePage>
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '$startTime${endTime.isNotEmpty ? ' - $endTime' : ''}',
-                            ),
-                            if (room != defaultLocationText)
-                              Text(
-                                'Salle : $room',
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.secondary,
-                                ),
-                              ),
-                            if (description.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4.0),
-                                child: Text(
-                                  description,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                              ),
+                            Text('$startTime - $endTime'),
+                            Text('Salle : $room'),
                           ],
                         ),
-                        isThreeLine:
-                            description.isNotEmpty ||
-                            room != defaultLocationText,
                       ),
                     );
                   },
