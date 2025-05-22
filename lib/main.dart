@@ -1,10 +1,10 @@
-import 'package:flutter/foundation.dart'; 
+import 'dart:collection';
 import 'package:flutter/material.dart';
-import 'package:icalendar_parser/icalendar_parser.dart';
 import 'package:http/http.dart' as http;
+import 'package:icalendar_parser/icalendar_parser.dart';
 import 'package:intl/intl.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 void main() {
   tzdata.initializeTimeZones();
@@ -18,6 +18,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'EDT UNC',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
@@ -36,113 +37,188 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  String? _userId;
+  final TextEditingController _controller = TextEditingController();
   late Future<List<IcsEvent>> _futureEvents;
-  static const String userId = 'jwaia04';
+  DateTime? _startOfWeek;
+  DateTime? _endOfWeek;
 
   @override
-  void initState() {
-    super.initState();
-    _futureEvents = fetchTodayEvents(userId);
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
-  Future<List<IcsEvent>> fetchTodayEvents(String userId) async {
-    final icsUrl =
+  void _onSubmitUserId() {
+    final input = _controller.text.trim();
+
+    if (input.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("L’identifiant ne peut pas être vide")),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    _startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    _endOfWeek = _startOfWeek!.add(const Duration(days: 7));
+
+    setState(() {
+      _userId = input;
+      _futureEvents = _loadWeekEvents(_userId!);
+    });
+  }
+
+  Future<List<IcsEvent>> _loadWeekEvents(String userId) async {
+    final url =
         'http://applis.univ-nc.nc/cgi-bin/WebObjects/EdtWeb.woa/2/wa/default?login=$userId%2Fical';
 
     try {
-      final response = await http.get(Uri.parse(icsUrl));
-
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode != 200) {
         throw Exception('Erreur HTTP : ${response.statusCode}');
       }
 
-      // Utilisation de compute pour décharger le parsing ICS dans un isolate
-      final events = await compute(parseIcsEvents, response.body);
-
-      return events;
+      return _parseIcsEvents(response.body);
     } catch (e) {
-      debugPrint('Erreur: $e');
+      debugPrint("Erreur lors du chargement des événements : $e");
       throw Exception("Impossible de charger l'emploi du temps.");
     }
   }
 
-  // Fonction pure appelée dans un isolate par compute
-  static List<IcsEvent> parseIcsEvents(String icsContent) {
-    tzdata.initializeTimeZones(); // nécessaire dans l'isolate
-    final noumea = tz.getLocation('Pacific/Noumea');
-
+  static List<IcsEvent> _parseIcsEvents(String icsContent) {
+    final location = tz.getLocation('Pacific/Noumea');
     final calendar = ICalendar.fromString(icsContent);
+
     final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final todayEnd = todayStart.add(const Duration(days: 1));
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final endOfWeek = startOfWeek.add(const Duration(days: 7));
 
-    final events =
-        calendar.data
-            .where(
-              (item) =>
-                  _getIgnoreCase(item, 'type')?.toString().toUpperCase() ==
-                  'VEVENT',
-            )
-            .map((item) => IcsEvent.fromJson(item, noumea))
-            .where(
-              (e) =>
-                  e.start != null &&
-                  e.end != null &&
-                  e.start!.isAfter(
-                    todayStart.subtract(const Duration(seconds: 1)),
-                  ) &&
-                  e.start!.isBefore(todayEnd),
-            )
-            .toList()
-          ..sort((a, b) => a.start!.compareTo(b.start!));
-
-    return events;
+    return calendar.data
+        .where(
+          (e) =>
+              _getCaseInsensitive(e, 'type')?.toString().toUpperCase() ==
+              'VEVENT',
+        )
+        .map((e) => IcsEvent.fromJson(e, location))
+        .where(
+          (e) =>
+              e.start != null &&
+              e.end != null &&
+              !e.start!.isBefore(startOfWeek) &&
+              e.start!.isBefore(endOfWeek),
+        )
+        .toList()
+      ..sort((a, b) => a.start!.compareTo(b.start!));
   }
 
-  static dynamic _getIgnoreCase(Map map, String key) {
-    for (final k in map.keys) {
-      if (k.toString().toLowerCase() == key.toLowerCase()) {
-        return map[k];
-      }
+  static dynamic _getCaseInsensitive(Map map, String key) {
+    return map.entries
+        .firstWhere(
+          (entry) => entry.key.toString().toLowerCase() == key.toLowerCase(),
+          orElse: () => const MapEntry<String, dynamic>('', null),
+        )
+        .value;
+  }
+
+  String _formatTime(DateTime? dt) =>
+      dt != null ? DateFormat('HH:mm').format(dt) : '';
+
+  Map<String, List<IcsEvent>> _groupEventsByDay(List<IcsEvent> events) {
+    final grouped = SplayTreeMap<String, List<IcsEvent>>();
+    for (var e in events) {
+      if (e.start == null) continue;
+      final dayKey = DateFormat('EEEE dd/MM', 'fr_FR').format(e.start!);
+      grouped.putIfAbsent(dayKey, () => []).add(e);
     }
-    return null;
-  }
-
-  String _formatDateTime(DateTime? dt) {
-    if (dt == null) return '';
-    final format = DateFormat('dd/MM HH:mm');
-    return format.format(dt);
+    return grouped;
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_userId == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Veuillez entrer votre identifiant UNC :',
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _controller,
+                decoration: const InputDecoration(
+                  labelText: 'Identifiant',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => _onSubmitUserId(),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: _onSubmitUserId,
+                child: const Text('Valider'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final String formattedStart = DateFormat('dd/MM').format(_startOfWeek!);
+    final String formattedEnd = DateFormat(
+      'dd/MM',
+    ).format(_endOfWeek!.subtract(const Duration(days: 1)));
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: Text(
+          '${widget.title} ($_userId) - Semaine $formattedStart → $formattedEnd',
+        ),
+      ),
       body: FutureBuilder<List<IcsEvent>>(
         future: _futureEvents,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Erreur : ${snapshot.error}'));
-          } else if (snapshot.data == null || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Aucun événement aujourd\'hui.'));
           }
 
-          final events = snapshot.data!;
-          return ListView.builder(
-            itemCount: events.length,
-            itemBuilder: (context, index) {
-              final e = events[index];
-              return ListTile(
-                leading: const Icon(Icons.event_note),
-                title: Text(e.summary ?? 'Sans titre'),
-                subtitle: Text(
-                  '${_formatDateTime(e.start)} → ${_formatDateTime(e.end)}\n${e.description}',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              );
-            },
+          if (snapshot.hasError) {
+            return Center(child: Text('Erreur : ${snapshot.error}'));
+          }
+
+          final events = snapshot.data;
+          if (events == null || events.isEmpty) {
+            return const Center(child: Text('Aucun événement cette semaine.'));
+          }
+
+          final groupedEvents = _groupEventsByDay(events);
+
+          return ListView(
+            children:
+                groupedEvents.entries.map((entry) {
+                  return ExpansionTile(
+                    title: Text(
+                      entry.key,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    children:
+                        entry.value.map((event) {
+                          return ListTile(
+                            leading: const Icon(Icons.event),
+                            title: Text(event.summary ?? 'Sans titre'),
+                            subtitle: Text(
+                              '${_formatTime(event.start)} → ${_formatTime(event.end)}\n${event.description ?? ''}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          );
+                        }).toList(),
+                  );
+                }).toList(),
           );
         },
       ),
@@ -158,41 +234,39 @@ class IcsEvent {
 
   IcsEvent({this.summary, this.description, this.start, this.end});
 
-  factory IcsEvent.fromJson(Map<String, dynamic> json, tz.Location timezone) {
-    dynamic getIgnoreCase(String key) {
-      for (final k in json.keys) {
-        if (k.toLowerCase() == key.toLowerCase()) return json[k];
-      }
-      return null;
+  factory IcsEvent.fromJson(Map<String, dynamic> json, tz.Location tzLocation) {
+    String? getField(String key) {
+      return json.entries
+          .firstWhere(
+            (e) => e.key.toString().toLowerCase() == key.toLowerCase(),
+            orElse: () => const MapEntry<String, dynamic>('', null),
+          )
+          .value
+          ?.toString();
     }
 
-    DateTime? parseDate(dynamic value) {
+    DateTime? parseDate(String? value) {
+      if (value == null) return null;
       try {
-        if (value is DateTime) return tz.TZDateTime.from(value, timezone);
-        if (value is String) {
-          if (value.contains('T')) {
-            return tz.TZDateTime.from(DateTime.parse(value), timezone);
-          } else if (value.length == 8) {
-            final year = int.parse(value.substring(0, 4));
-            final month = int.parse(value.substring(4, 6));
-            final day = int.parse(value.substring(6, 8));
-            return tz.TZDateTime(timezone, year, month, day);
-          }
+        if (value.contains('T')) {
+          return tz.TZDateTime.from(DateTime.parse(value), tzLocation);
+        } else if (value.length == 8) {
+          final year = int.parse(value.substring(0, 4));
+          final month = int.parse(value.substring(4, 6));
+          final day = int.parse(value.substring(6, 8));
+          return tz.TZDateTime(tzLocation, year, month, day);
         }
       } catch (_) {}
       return null;
     }
 
-    String? clean(String? text) {
-      if (text == null) return null;
-      return text.split('(')[0].trim();
-    }
+    String? clean(String? value) => value?.split('(')[0].trim();
 
     return IcsEvent(
-      summary: clean(getIgnoreCase('summary')?.toString()),
-      description: clean(getIgnoreCase('description')?.toString()),
-      start: parseDate(getIgnoreCase('dtstart')),
-      end: parseDate(getIgnoreCase('dtend')),
+      summary: clean(getField('summary')),
+      description: clean(getField('description')),
+      start: parseDate(getField('dtstart')),
+      end: parseDate(getField('dtend')),
     );
   }
 }
