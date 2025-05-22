@@ -1,100 +1,52 @@
-import 'dart:async'; // Pour TimeoutException
-import 'package:flutter/foundation.dart'; // Pour debugPrint
-import 'package:http/http.dart' as http; // Pour http.Client, http.Response
-import 'package:timezone/timezone.dart' as tz; // Pour tz.Location
-import 'package:icalendar_parser/icalendar_parser.dart'; // Pour ICalendar
-import 'package:test_app/models/ics_event.dart'; // Pour IcsEvent (fichier que tu dois créer ou avoir dan_
-import 'package:test_app/constants/strings.dart';
+import 'package:http/http.dart' as http;
+import 'package:icalendar_parser/icalendar_parser.dart';
+import 'package:timezone/timezone.dart' as tz;
+import '../models/ics_event.dart';
 
 class ScheduleService {
-  final http.Client _client;
-  ScheduleService(this._client);
+  final http.Client client;
 
-  Future<List<IcsEvent>> fetchWeekEvents(
+  ScheduleService(this.client);
+
+  Future<List<IcsEvent>> fetchSchedule(
     String userId,
-    tz.Location location,
-    DateTime startOfWeek,
-    DateTime endOfWeek,
+    tz.Location tzLocation,
   ) async {
-    final String encodedUserId = Uri.encodeComponent(userId);
-    final Uri url = Uri.parse(
-      'http://applis.univ-nc.nc/cgi-bin/WebObjects/EdtWeb.woa/2/wa/default?login=$encodedUserId%2Fical',
+    final url = Uri.parse(
+      'http://applis.univ-nc.nc/cgi-bin/WebObjects/EdtWeb.woa/2/wa/default?login=$userId%2Fical',
     );
-    debugPrint("Fetching events from: $url");
+    final response = await client.get(url);
 
-    try {
-      final http.Response response = await _client
-          .get(url)
-          .timeout(const Duration(seconds: 20));
-
-      if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          debugPrint("ICS response body is empty for $userId.");
-          return [];
-        }
-        return _parseIcsEvents(response.body, location, startOfWeek, endOfWeek);
-      } else if (response.statusCode == 404) {
-        throw Exception(
-          "L'identifiant '$userId' n'a pas été trouvé ou l'emploi du temps n'existe pas (Erreur ${response.statusCode}).",
-        );
-      } else {
-        throw Exception(
-          'Erreur serveur (${response.statusCode}) lors de la récupération de l\'emploi du temps.',
-        );
-      }
-    } on TimeoutException catch (_) {
-      debugPrint("Timeout lors du chargement des événements pour $userId");
-      throw Exception(timeoutErrorMessage);
-    } on http.ClientException catch (e) {
-      debugPrint("Erreur réseau/client pour $userId: $e");
-      throw Exception(networkErrorMessage);
-    } catch (e) {
-      debugPrint(
-        "Erreur inconnue lors du chargement des événements pour $userId: $e",
-      );
-      throw Exception("$defaultErrorMessage ($e)");
+    if (response.statusCode != 200) {
+      throw Exception("Erreur HTTP ${response.statusCode}");
     }
-  }
 
-  List<IcsEvent> _parseIcsEvents(
-    String icsContent,
-    tz.Location noumeaLocation,
-    DateTime startOfWeek,
-    DateTime endOfWeek,
-  ) {
-    try {
-      final ICalendar calendar = ICalendar.fromString(icsContent);
+    final calendar = ICalendar.fromString(response.body);
+    final allEvents =
+        calendar.data
+            .where((e) => e['type'] == 'VEVENT')
+            .map((e) => IcsEvent.fromJson(e, tzLocation))
+            .toList();
 
-      return calendar.data
-          .where(
-            (e) =>
-                _getCaseInsensitive(e, 'type')?.toString().toUpperCase() ==
-                icsTypeVEvent,
-          )
-          .map((e) => IcsEvent.fromJson(e, noumeaLocation))
-          .where(
-            (event) =>
-                event.start != null &&
-                event.end != null &&
-                !event.start!.isBefore(startOfWeek) &&
-                event.start!.isBefore(endOfWeek),
-          )
-          .toList()
-        ..sort((a, b) => a.start!.compareTo(b.start!));
-    } catch (e) {
-      debugPrint("Erreur de parsing du contenu ICS: $e");
-      throw Exception(
-        "Les données de l'emploi du temps sont corrompues ou dans un format inattendu.",
-      );
-    }
-  }
+    // Calculer le début et la fin de la semaine en cours (lundi à dimanche)
+    final now = tz.TZDateTime.now(tzLocation);
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1)); // lundi
+    final endOfWeek = startOfWeek.add(
+      const Duration(days: 7),
+    ); // lundi prochain
 
-  dynamic _getCaseInsensitive(Map map, String key) {
-    return map.entries
-        .firstWhere(
-          (entry) => entry.key.toString().toLowerCase() == key.toLowerCase(),
-          orElse: () => const MapEntry<String, dynamic>('', null),
-        )
-        .value;
+    // Filtrer les événements dont start est dans cette plage
+    final eventsOfWeek =
+        allEvents.where((event) {
+          final start = event.start;
+          if (start == null) return false;
+          final startLocal = tz.TZDateTime.from(start, tzLocation);
+          return startLocal.isAfter(
+                startOfWeek.subtract(const Duration(seconds: 1)),
+              ) &&
+              startLocal.isBefore(endOfWeek);
+        }).toList();
+
+    return eventsOfWeek;
   }
 }
