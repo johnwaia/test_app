@@ -1,4 +1,4 @@
-# 📅 Emploi du Temps Université de la Nouvelle-Calédonie
+# 📅 Emploi du Temps – Université de la Nouvelle-Calédonie
 
 **Application mobile Flutter** permettant aux étudiants de l’Université de la Nouvelle-Calédonie (UNC) de consulter facilement leur emploi du temps personnalisé à partir de leur identifiant étudiant.
 
@@ -7,30 +7,30 @@
 ## 🚀 Fonctionnalités
 
 * 🧑‍🎓 Saisie de l'identifiant étudiant.
-* 📆 Affichage de l’emploi du temps récupéré en ligne.
-* 📍 Détails complets pour chaque événement : intitulé, salle, professeur, heure de début et de fin.
-* 🗓️ Tri et regroupement automatique des événements par jour.
-* 🇫🇷 Interface en français avec prise en charge des fuseaux horaires (Nouméa) et des formats de date français.
+* 📆 Affichage en ligne de l’emploi du temps personnalisé.
+* 📍 Détails complets pour chaque événement : intitulé, salle, enseignant, heure de début et de fin.
+* 🗓️ Tri automatique des événements par jour, avec sélection possible de la semaine à consulter.
+* 🇫🇷 Interface 100 % française, avec gestion du fuseau horaire (Nouméa) et format de date adapté.
 
 ---
 
 ## 📦 Prérequis
 
-Avant de pouvoir exécuter le projet, assure-toi d’avoir installé les éléments suivants :
+Avant de lancer le projet, assure-toi d’avoir installé les éléments suivants :
 
 * [Flutter SDK](https://flutter.dev/docs/get-started/install)
-* [Dart SDK](https://dart.dev/get-dart) 
-* Un éditeur 
-    * [Android Studio](https://developer.android.com/studio) peut être utiliser avec Un émulateur Android/iOS
-    * [Visual Studio Code](https://code.visualstudio.com/) peut être utiliser avec appareil physique connecté (l'appareil doit être en mode développeur)
+* [Dart SDK](https://dart.dev/get-dart)
+* IDE recommandé :
 
-* Un accès Internet pour récupérer les données d’emploi du temps
+  * [Android Studio](https://developer.android.com/studio) (avec un émulateur Android/iOS)
+  * ou [Visual Studio Code](https://code.visualstudio.com/) (avec un appareil physique en mode développeur)
+* Connexion Internet active (pour récupérer les emplois du temps)
 
 ---
 
 ## 🛠️ Dépendances principales
 
-Le projet utilise plusieurs packages Flutter essentiels :
+Voici les packages Flutter utilisés :
 
 ```yaml
 dependencies:
@@ -46,71 +46,72 @@ dependencies:
 
 ## 📁 Structure principale du projet
 
-* `main.dart` – Point d’entrée de l’application
-* `app.dart` – Initialisation de l’application et gestion des vues principales
-* `views/user_id_input_view.dart` – Interface de saisie de l'identifiant étudiant
-* `views/home_page.dart` – Affichage des événements (emploi du temps)
-* `services/schedule_service.dart` – Appels API pour récupérer les données ICS
-* `models/ics_event.dart` – Modèle de données pour représenter un événement
-* `constants/strings.dart` – Constantes de texte (multilingue, ergonomie)
+* `main.dart` – Point d’entrée de l’application.
+* `app.dart` – Initialisation générale et navigation.
+* `views/user_id_input_view.dart` – Vue pour la saisie de l’identifiant étudiant.
+* `views/home_page.dart` – Vue principale affichant les événements.
+* `services/schedule_service.dart` – Récupération des données au format `.ics`.
+* `models/ics_event.dart` – Modèle de représentation des événements.
+* `constants/strings.dart` – Constantes et textes de l’interface.
 
 ---
 
-## ⚙️ Comment exécuter le projet
+## ⚙️ Lancer le projet
 
-1. **Clone le dépôt** :
+1. **Cloner le dépôt** :
 
    ```bash
-   https://github.com/johnwaia/test_app.git
+   git clone https://github.com/johnwaia/test_app.git
+   ```
+
+2. **Se rendre dans le répertoire** :
+
+   ```bash
    cd test_app
    ```
 
-2. **Installe les dépendances** :
+3. **Installer les dépendances** :
 
    ```bash
    flutter pub get
    ```
 
-3. **Lance l’application** :
+4. **Vérifier la configuration de l’environnement** :
 
-   * Sur un simulateur ou appareil physique :
+   ```bash
+   flutter doctor
+   ```
 
-     ```bash
-     flutter run
-     ```
+5. **Exécuter l’application** :
+
+   ```bash
+   flutter run
+   ```
 
 ---
 
+## 📸 Captures d’écran
 
-## 📸 Captures d’écran (optionnel)
+<p align="center">
+  <img src="assets/screenshots/ouverture_application.jpg" alt="Ouverture" width="200" style="margin-right: 100px;"/>
+  <img src="assets/screenshots/mettre_son_identifiant.jpg" alt="Identifiant" width="200" style="margin-right: 100px;"/>
+  <img src="assets/screenshots/affichage_emploi_du_temps.jpg" alt="Emploi du temps" width="200"/>
+</p>
 
-### Ouverture de l'application 
-![Écran ouverture de l'application](assets/screenshots/ouverture_application.jpg)
-
-### Mettre son identifiant UNC
-![Écran entrer de l'identifiant](assets/screenshots/mettre_son_identifiant.jpg)
-
-### Affichage des Emploi du temps
-![Écran affichage des emploi du temps](assets/screenshots/affichage_emploi_du_temps.jpg)
-
+---
 
 ## 📍 Remarques
 
-* Les événements sont extraits via un service externe à partir d’un fichier `.ics` lié à l’ID étudiant.
-
-* Le fuseau horaire utilisé est `Pacific/Noumea` pour correspondre à l’heure locale.
-
-* L’application fonctionne uniquement avec une connexion Internet active.
+* Les événements sont extraits dynamiquement depuis un fichier `.ics` associé à l’identifiant étudiant.
+* Le fuseau horaire utilisé est `Pacific/Noumea`, pour correspondre à l’heure locale.
+* L’application nécessite une connexion Internet active pour fonctionner.
 
 ---
 
-## 🧑‍💻 Contribuer
-
-Tu veux améliorer l’application ? Tu es le bienvenu ! Ouvre une issue, propose une amélioration ou soumets une pull request !
-
----
 
 ## 📄 Licence
 
-Projet développé dans un cadre pédagogique. Licence à définir selon usage (MIT, GPL, etc.)
+Projet développé dans un cadre pédagogique.
+Licence à définir selon l’usage (ex. : MIT, GPL, etc.).
 
+---
