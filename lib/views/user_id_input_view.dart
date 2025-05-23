@@ -55,26 +55,6 @@ class UserIdInputView extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                Text(
-                  "Cette application vous permet de consulter votre emploi du temps universitaire.",
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-
-                // Consigne
-                Text(
-                  userIdPrompt,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: Colors.white70),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-
-                // Champ de saisie
                 TextField(
                   controller: controller,
                   decoration: InputDecoration(
