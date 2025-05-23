@@ -95,7 +95,8 @@ dependencies:
 <p align="center">
   <img src="assets/screenshots/ouverture_application.jpg" alt="Ouverture" width="200" style="margin-right: 100px;"/>
   <img src="assets/screenshots/mettre_son_identifiant.jpg" alt="Identifiant" width="200" style="margin-right: 100px;"/>
-  <img src="assets/screenshots/affichage_emploi_du_temps.jpg" alt="Emploi du temps" width="200"/>
+  <img src="assets/screenshots/affichage_emploi_du_temps.jpg" alt="Emploi du temps" width="200" style="margin-right: 100px;/>
+  <img src="assets/screenshots/detail_cours.jpg" alt="details cours" width="200"/>
 </p>
 
 ---
