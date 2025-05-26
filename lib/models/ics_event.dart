@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:icalendar_parser/icalendar_parser.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -7,7 +6,7 @@ class IcsEvent {
   final String? description;
   final DateTime? start;
   final DateTime? end;
-  final String? room;
+  final List<String>? room;
   final String? teacher;
 
   IcsEvent({
@@ -20,26 +19,21 @@ class IcsEvent {
   });
 
   factory IcsEvent.fromJson(Map<String, dynamic> json, tz.Location tzLocation) {
-    dynamic getField(String key) {
-      final entry = json.entries.firstWhere(
-        (e) => e.key.toString().toLowerCase() == key.toLowerCase(),
-        orElse: () => const MapEntry<String, dynamic>('', null),
-      );
-      return entry.value;
-    }
+    final Map<String, dynamic> normalizedJson = {
+      for (final entry in json.entries) entry.key.toLowerCase(): entry.value,
+    };
+
+    dynamic getField(String key) => normalizedJson[key.toLowerCase()];
 
     DateTime? parseDate(dynamic fieldValue) {
       if (fieldValue == null) return null;
-      String? dateString;
+      String dateString;
 
       if (fieldValue is IcsDateTime) {
         dateString = fieldValue.dt;
       } else if (fieldValue is String) {
         dateString = fieldValue;
       } else {
-        debugPrint(
-          "Type de date inattendu: ${fieldValue.runtimeType} pour la valeur: $fieldValue",
-        );
         return null;
       }
 
@@ -47,20 +41,18 @@ class IcsEvent {
 
       try {
         if (dateString.contains('T')) {
-          if (dateString.endsWith('Z')) {
-            return tz.TZDateTime.parse(tzLocation, dateString);
-          } else {
-            final localDateTime = DateTime.parse(dateString);
-            return tz.TZDateTime.from(localDateTime, tzLocation);
-          }
-        } else if (dateString.length == 8) {
-          final year = int.parse(dateString.substring(0, 4));
-          final month = int.parse(dateString.substring(4, 6));
-          final day = int.parse(dateString.substring(6, 8));
-          return tz.TZDateTime(tzLocation, year, month, day);
+          return dateString.endsWith('Z')
+              ? tz.TZDateTime.parse(tzLocation, dateString)
+              : tz.TZDateTime.from(DateTime.parse(dateString), tzLocation);
         }
-      } catch (e) {
-        debugPrint("Erreur de parsing de la chaîne de date '$dateString': $e");
+
+        if (dateString.length == 8) {
+          final y = int.parse(dateString.substring(0, 4));
+          final m = int.parse(dateString.substring(4, 6));
+          final d = int.parse(dateString.substring(6, 8));
+          return tz.TZDateTime(tzLocation, y, m, d);
+        }
+      } catch (_) {
         return null;
       }
 
@@ -69,48 +61,58 @@ class IcsEvent {
 
     String? clean(String? value) => value?.split('(')[0].trim();
 
-    String? extractRoom(String? text) {
+    /// Extrait toutes les salles trouvées (ex : L34info20, L35info36)
+    List<String>? extractRooms(String? text) {
       if (text == null) return null;
-
-      final btfRegex = RegExp(
-        r'(?:Btf|Bte|Bti|Btg|Bth|Btr|Bts|Lls|Amp)\s*:\s*([^\[\]\n\r]+)',
+      final roomRegex = RegExp(
+        r'(?:Btf|Bte|Bti|Btg|Bth|Btr|Bts|Ate|Lls|Amp|Aph)\s*:\s*([^\[\]\n\r]+)',
         caseSensitive: false,
       );
-      final match = btfRegex.firstMatch(text);
-      if (match != null) {
-        return match.group(1)?.trim();
-      }
 
-      return null;
+      final matches = roomRegex.allMatches(text);
+      final rooms =
+          matches
+              .expand((match) => match.group(1)!.split(RegExp(r'\s+')))
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toSet()
+              .toList();
+
+      return rooms.isEmpty ? null : rooms;
     }
 
     String? extractTeacher(String? text) {
       if (text == null) return null;
-
-      final lines = text.split('\n').map((l) => l.trim()).toList();
-      for (var line in lines) {
-        final RegExp nameRegex = RegExp(r'^[A-Z]\.[A-Za-z]+$');
-        if (nameRegex.hasMatch(line)) {
+      final lines = text.split('\n').map((l) => l.trim());
+      for (final line in lines) {
+        if (RegExp(r'^[A-Z]\.[A-Za-zÀ-ÿ\-]+$').hasMatch(line)) {
           return line;
         }
       }
-
       return null;
     }
 
-    final String? rawSummary = getField('summary')?.toString();
-    final String? rawDescription = getField('description')?.toString();
-    final String combinedText = ((rawDescription ?? '') +
-            '\n' +
-            (rawSummary ?? ''))
+    String? rawSummary = getField('summary')?.toString();
+    final rawDescription = getField('description')?.toString();
+
+    // Fusionne les champs pour analyse
+    final combinedText = ((rawDescription ?? '') + '\n' + (rawSummary ?? ''))
         .replaceAll(r'\n', '\n');
+
+    // Remplace Cm par CC si CONTROLE CONTINU est mentionné
+    if ((rawSummary ?? '').toUpperCase().contains('CONTROLE CONTINU')) {
+      rawSummary = rawSummary?.replaceAll(
+        RegExp(r'\bCm\b', caseSensitive: false),
+        'CC',
+      );
+    }
 
     return IcsEvent(
       summary: clean(rawSummary),
       description: clean(rawDescription),
       start: parseDate(getField('dtstart')),
       end: parseDate(getField('dtend')),
-      room: extractRoom(combinedText),
+      room: extractRooms(combinedText),
       teacher: extractTeacher(combinedText),
     );
   }

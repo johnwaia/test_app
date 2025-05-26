@@ -56,7 +56,11 @@ class ScheduleService {
                         : null,
                 start: event.start,
                 end: event.end,
-                room: event.room != null ? cleanAccents(event.room!) : null,
+                // Ici on nettoie chaque élément de la liste room si elle existe
+                room:
+                    event.room != null
+                        ? event.room!.map((r) => cleanAccents(r)).toList()
+                        : null,
                 teacher:
                     event.teacher != null ? cleanAccents(event.teacher!) : null,
               );
