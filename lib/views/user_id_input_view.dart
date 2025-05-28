@@ -15,27 +15,28 @@ class UserIdInputView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF0077B6), // Bleu foncé
-              Color(0xFF90E0EF), // Bleu clair
-            ],
+            colors: [Color(0xFF0077B6), Color(0xFF90E0EF)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 48.0,
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo avec arrondi
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Image.asset(
@@ -46,14 +47,14 @@ class UserIdInputView extends StatelessWidget {
                 const SizedBox(height: 32),
 
                 Text(
-                  "Bienvenue",
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  title,
+                  style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 TextField(
                   controller: controller,
@@ -62,30 +63,38 @@ class UserIdInputView extends StatelessWidget {
                     prefixIcon: const Icon(Icons.person),
                     filled: true,
                     fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 16.0,
+                      horizontal: 12.0,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   textAlign: TextAlign.center,
+                  textInputAction: TextInputAction.done,
                   onSubmitted: (_) => onSubmit(),
                 ),
                 const SizedBox(height: 24),
 
-                // Bouton blanc sur bleu
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
+                  child: ElevatedButton.icon(
                     onPressed: onSubmit,
+                    icon: const Icon(Icons.login),
+                    label: const Text("Continuer"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade800,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      textStyle: const TextStyle(fontSize: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF0077B6),
+                      textStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    child: const Text(submitButtonText),
                   ),
                 ),
               ],

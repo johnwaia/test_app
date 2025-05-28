@@ -18,8 +18,15 @@ class IcsEvent {
     this.teacher,
   });
 
+  static final RegExp _roomRegex = RegExp(
+    r'(?:Btf|Bte|Bti|Btg|Bth|Btr|Bts|Ate|Lls|Amp|Aph|Eif)\s*:\s*([^\[\]\n\r]+)',
+    caseSensitive: false,
+  );
+
+  static final RegExp _teacherRegex = RegExp(r'^[A-Z]\.[A-Za-zÀ-ÿ\-]+$');
+
   factory IcsEvent.fromJson(Map<String, dynamic> json, tz.Location tzLocation) {
-    final Map<String, dynamic> normalizedJson = {
+    final normalizedJson = <String, dynamic>{
       for (final entry in json.entries) entry.key.toLowerCase(): entry.value,
     };
 
@@ -27,30 +34,27 @@ class IcsEvent {
 
     DateTime? parseDate(dynamic fieldValue) {
       if (fieldValue == null) return null;
-      String dateString;
 
-      if (fieldValue is IcsDateTime) {
-        dateString = fieldValue.dt;
-      } else if (fieldValue is String) {
-        dateString = fieldValue;
-      } else {
-        return null;
-      }
+      final String? dateString = switch (fieldValue) {
+        IcsDateTime dt => dt.dt,
+        String s => s,
+        _ => null,
+      };
 
-      if (dateString.isEmpty) return null;
+      if (dateString == null || dateString.isEmpty) return null;
 
       try {
         if (dateString.contains('T')) {
           return dateString.endsWith('Z')
               ? tz.TZDateTime.parse(tzLocation, dateString)
               : tz.TZDateTime.from(DateTime.parse(dateString), tzLocation);
-        }
-
-        if (dateString.length == 8) {
-          final y = int.parse(dateString.substring(0, 4));
-          final m = int.parse(dateString.substring(4, 6));
-          final d = int.parse(dateString.substring(6, 8));
-          return tz.TZDateTime(tzLocation, y, m, d);
+        } else if (dateString.length == 8) {
+          return tz.TZDateTime(
+            tzLocation,
+            int.parse(dateString.substring(0, 4)),
+            int.parse(dateString.substring(4, 6)),
+            int.parse(dateString.substring(6, 8)),
+          );
         }
       } catch (_) {
         return null;
@@ -59,34 +63,34 @@ class IcsEvent {
       return null;
     }
 
-    String? clean(String? value) => value?.split('(')[0].trim();
+    String? clean(String? value) => value?.split('(').first.trim();
 
-    /// Extrait toutes les salles trouvées (ex : L34info20, L35info36)
     List<String>? extractRooms(String? text) {
       if (text == null) return null;
-      final roomRegex = RegExp(
-        r'(?:Btf|Bte|Bti|Btg|Bth|Btr|Bts|Ate|Lls|Amp|Aph)\s*:\s*([^\[\]\n\r]+)',
-        caseSensitive: false,
-      );
 
-      final matches = roomRegex.allMatches(text);
-      final rooms =
-          matches
-              .expand((match) => match.group(1)!.split(RegExp(r'\s+')))
-              .map((s) => s.trim())
-              .where((s) => s.isNotEmpty)
-              .toSet()
-              .toList();
+      final matches = _roomRegex.allMatches(text);
+      final Set<String> rooms = {};
 
-      return rooms.isEmpty ? null : rooms;
+      for (final match in matches) {
+        final group = match.group(1);
+        if (group != null) {
+          for (final s in group.split(RegExp(r'\s+'))) {
+            final room = s.trim();
+            if (room.isNotEmpty) rooms.add(room);
+          }
+        }
+      }
+
+      return rooms.isEmpty ? null : rooms.toList();
     }
 
     String? extractTeacher(String? text) {
       if (text == null) return null;
-      final lines = text.split('\n').map((l) => l.trim());
-      for (final line in lines) {
-        if (RegExp(r'^[A-Z]\.[A-Za-zÀ-ÿ\-]+$').hasMatch(line)) {
-          return line;
+
+      for (final line in text.split('\n')) {
+        final trimmed = line.trim();
+        if (_teacherRegex.hasMatch(trimmed)) {
+          return trimmed;
         }
       }
       return null;
@@ -95,11 +99,11 @@ class IcsEvent {
     String? rawSummary = getField('summary')?.toString();
     final rawDescription = getField('description')?.toString();
 
-    // Fusionne les champs pour analyse
-    final combinedText = ((rawDescription ?? '') + '\n' + (rawSummary ?? ''))
-        .replaceAll(r'\n', '\n');
+    final combinedText =
+        (rawDescription ?? '') +
+        '\n' +
+        (rawSummary ?? '').replaceAll(r'\n', '\n');
 
-    // Remplace Cm par CC si CONTROLE CONTINU est mentionné
     if ((rawSummary ?? '').toUpperCase().contains('CONTROLE CONTINU')) {
       rawSummary = rawSummary?.replaceAll(
         RegExp(r'\bCm\b', caseSensitive: false),
