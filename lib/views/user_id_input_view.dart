@@ -41,11 +41,10 @@ class UserIdInputView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   child: Image.asset(
                     'assets/Logo_Université_de_la_Nouvelle-Calédonie.jpg',
-                    height: 160,
+                    height: 140,
                   ),
                 ),
                 const SizedBox(height: 32),
-
                 Text(
                   title,
                   style: theme.textTheme.headlineSmall?.copyWith(
@@ -55,7 +54,6 @@ class UserIdInputView extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
-
                 TextField(
                   controller: controller,
                   decoration: InputDecoration(
@@ -76,7 +74,6 @@ class UserIdInputView extends StatelessWidget {
                   onSubmitted: (_) => onSubmit(),
                 ),
                 const SizedBox(height: 24),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(

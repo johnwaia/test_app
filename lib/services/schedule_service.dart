@@ -10,17 +10,19 @@ class ScheduleService {
   ScheduleService(this.client);
 
   // Corrige les accents mal encodés via une seule RegExp
-  static final _accentFixMap = {'Ã©': 'é', 'Ã¨': 'è', 'Ã´': 'ô', 'Ã': 'à'};
+  static final Map<String, String> _accentFixMap = {
+    'Ã©': 'é',
+    'Ã¨': 'è',
+    'Ã´': 'ô',
+    'Ã': 'à',
+  };
 
-  static final _accentFixRegex = RegExp(
+  static final RegExp _accentFixRegex = RegExp(
     _accentFixMap.keys.map(RegExp.escape).join('|'),
   );
 
-  static String cleanAccents(String input) {
-    return input.replaceAllMapped(_accentFixRegex, (match) {
-      return _accentFixMap[match[0]]!;
-    });
-  }
+  static String cleanAccents(String input) =>
+      input.replaceAllMapped(_accentFixRegex, (m) => _accentFixMap[m[0]]!);
 
   Future<List<IcsEvent>> fetchSchedule(
     String userId,
@@ -36,8 +38,9 @@ class ScheduleService {
       throw Exception("Erreur HTTP ${response.statusCode}");
     }
 
-    final contentType = response.headers['content-type'] ?? '';
-    final isUtf8 = contentType.toLowerCase().contains('charset=utf-8');
+    final isUtf8 = (response.headers['content-type'] ?? '')
+        .toLowerCase()
+        .contains('charset=utf-8');
     final decodedBody =
         isUtf8
             ? utf8.decode(response.bodyBytes)
@@ -46,30 +49,28 @@ class ScheduleService {
     final calendar = ICalendar.fromString(decodedBody);
     final List<Map<String, dynamic>> eventsData = calendar.data;
 
-    final List<IcsEvent> allEvents = [];
-
-    for (final e in eventsData) {
-      if (e['type'] != 'VEVENT') continue;
-
-      final event = IcsEvent.fromJson(e, tzLocation);
-      if (event.start == null) continue;
-
-      allEvents.add(
-        IcsEvent(
-          summary: event.summary != null ? cleanAccents(event.summary!) : null,
-          description:
-              event.description != null
-                  ? cleanAccents(event.description!)
-                  : null,
-          start: event.start,
-          end: event.end,
-          room: event.room?.map(cleanAccents).toList(),
-          teacher: event.teacher != null ? cleanAccents(event.teacher!) : null,
-        ),
-      );
-    }
-
-    allEvents.sort((a, b) => a.start!.compareTo(b.start!));
+    final List<IcsEvent> allEvents =
+        eventsData
+            .where((e) => e['type'] == 'VEVENT')
+            .map((e) => IcsEvent.fromJson(e, tzLocation))
+            .where((event) => event.start != null)
+            .map(
+              (event) => IcsEvent(
+                summary:
+                    event.summary != null ? cleanAccents(event.summary!) : null,
+                description:
+                    event.description != null
+                        ? cleanAccents(event.description!)
+                        : null,
+                start: event.start,
+                end: event.end,
+                room: event.room?.map(cleanAccents).toList(),
+                teacher:
+                    event.teacher != null ? cleanAccents(event.teacher!) : null,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => a.start!.compareTo(b.start!));
 
     return allEvents;
   }

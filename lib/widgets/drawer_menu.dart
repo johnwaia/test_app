@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/view_mode.dart';
 import '../views/user_id_input_view.dart';
+import '../views/MeetingOrganizerView.dart';
 
 class DrawerMenu extends StatelessWidget {
   final ViewMode currentView;
@@ -19,9 +20,18 @@ class DrawerMenu extends StatelessWidget {
         children: [
           ListTile(
             leading: const Icon(Icons.calendar_view_week),
-            title: const Text('Vue semaine'),
+            title: const Text('Emploi du temps'),
             selected: currentView == ViewMode.week,
             onTap: () => onChange(ViewMode.week),
+          ),
+          ListTile(
+            leading: const Icon(Icons.group),
+            title: const Text('Organiser une réunion'),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MeetingOrganizerView()),
+              );
+            },
           ),
           const Divider(),
           ListTile(
@@ -33,7 +43,7 @@ class DrawerMenu extends StatelessWidget {
                   builder:
                       (_) => UserIdInputView(
                         controller: TextEditingController(),
-                        onSubmit: () {}, // À adapter selon ta logique
+                        onSubmit: () {},
                         title: 'Bienvenue',
                       ),
                 ),

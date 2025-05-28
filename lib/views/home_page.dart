@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
 import '../models/ics_event.dart';
-import '../utils/event_utils.dart'; // <-- Ajoute cet import
+import '../utils/event_utils.dart';
 import '../widgets/drawer_menu.dart';
-import '../models/view_mode.dart'; // Ajoute cet import
+import '../models/view_mode.dart';
 
 const String noEventsText = 'Aucun événement à venir.';
 const String defaultRoomText = 'Salle non spécifiée';
@@ -19,71 +19,16 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class EventDetailsPage extends StatelessWidget {
-  final IcsEvent event;
-
-  const EventDetailsPage({super.key, required this.event});
-
-  @override
-  Widget build(BuildContext context) {
-    final start =
-        event.start != null
-            ? DateFormat('dd MMM yyyy HH:mm', 'fr_FR').format(event.start!)
-            : 'Heure inconnue';
-    final end =
-        event.end != null
-            ? DateFormat('dd MMM yyyy HH:mm', 'fr_FR').format(event.end!)
-            : 'Heure inconnue';
-
-    final teacher = getFirstString(event.teacher);
-    final room = getFirstString(event.room, defaultValue: defaultRoomText);
-
-    return Scaffold(
-      appBar: AppBar(title: Text(event.summary ?? 'Détails du cours')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Nom : ${event.summary ?? "Sans titre"}',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Text('Professeur : $teacher', style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 12),
-            Text('Début : $start', style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 12),
-            Text('Fin : $end', style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 12),
-            Text('Salle : $room', style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 12),
-            if (event.description?.isNotEmpty ?? false)
-              Text(
-                'Description :\n${event.description}',
-                style: const TextStyle(fontSize: 14),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage> {
   Map<String, List<IcsEvent>> _groupedEvents = {};
   List<String> _daysWithEvents = [];
   DateTime _referenceDate = DateTime.now();
-  ViewMode _currentView = ViewMode.week; // Ajoute cette variable d'état
-  late Map<String, List<IcsEvent>> _groupedEventsByWeek;
-  DateTime _selectedMonth = DateTime.now();
+  ViewMode _currentView = ViewMode.week;
 
   @override
   void initState() {
     super.initState();
     _groupEventsByDay();
-    _groupEventsByWeek();
   }
 
   @override
@@ -91,7 +36,6 @@ class _HomePageState extends State<HomePage>
     super.didUpdateWidget(oldWidget);
     if (!const ListEquality().equals(widget.events, oldWidget.events)) {
       _groupEventsByDay();
-      _groupEventsByWeek();
     }
   }
 
@@ -122,13 +66,6 @@ class _HomePageState extends State<HomePage>
     });
   }
 
-  void _groupEventsByWeek() {
-    _groupedEventsByWeek = groupBy(
-      widget.events.where((e) => e.start != null),
-      (IcsEvent e) => 'Semaine ${DateFormat('w').format(e.start!)}',
-    );
-  }
-
   void _navigateWeek(int offsetDays) {
     setState(() {
       _referenceDate = _referenceDate.add(Duration(days: offsetDays));
@@ -139,52 +76,8 @@ class _HomePageState extends State<HomePage>
   void _onViewModeChange(ViewMode mode) {
     setState(() {
       _currentView = mode;
-      // Tu peux ici regrouper les événements différemment si besoin
     });
     Navigator.pop(context); // Ferme le drawer
-  }
-
-  List<String> get _weeksOfMonth {
-    // Génère les labels de semaines pour le mois courant, ex: ["Semaine 22", ...]
-    final now = _referenceDate;
-    final firstDayOfMonth = DateTime(now.year, now.month, 1);
-    final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
-    final weeks = <String>{};
-    for (
-      var d = firstDayOfMonth;
-      d.isBefore(lastDayOfMonth) || d.isAtSameMomentAs(lastDayOfMonth);
-      d = d.add(const Duration(days: 1))
-    ) {
-      final weekStr = DateFormat('w').format(d);
-      final weekNum = int.tryParse(weekStr);
-      if (weekNum != null) {
-        weeks.add('Semaine $weekNum');
-      }
-    }
-    return weeks.toList();
-  }
-
-  // Fonction pour obtenir les jours d'une semaine donnée
-  List<String> _getDaysOfWeek(String weekLabel) {
-    // Extrait le numéro de semaine et retourne la liste des jours de cette semaine
-    final weekNum =
-        int.tryParse(weekLabel.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
-    final year = _referenceDate.year;
-    final firstDayOfYear = DateTime(year, 1, 1);
-    final firstWeekDay = firstDayOfYear.add(Duration(days: (weekNum - 1) * 7));
-    return List.generate(7, (i) {
-      final day = firstWeekDay.add(Duration(days: i));
-      return DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(day);
-    });
-  }
-
-  List<DateTime> get _daysOfCurrentMonth {
-    final firstDay = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
-    final lastDay = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
-    return List.generate(
-      lastDay.day,
-      (i) => DateTime(_selectedMonth.year, _selectedMonth.month, i + 1),
-    );
   }
 
   @override
@@ -196,13 +89,8 @@ class _HomePageState extends State<HomePage>
       );
     }
 
-    final tabs =
-        _currentView == ViewMode.week
-            ? _daysWithEvents
-            : ['Mois']; // Un seul tab pour le mois
-
     return DefaultTabController(
-      length: tabs.length,
+      length: _daysWithEvents.length,
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
@@ -232,7 +120,8 @@ class _HomePageState extends State<HomePage>
                 ),
                 TabBar(
                   isScrollable: true,
-                  tabs: tabs.map((label) => Tab(text: label)).toList(),
+                  tabs:
+                      _daysWithEvents.map((label) => Tab(text: label)).toList(),
                 ),
               ],
             ),
@@ -244,121 +133,59 @@ class _HomePageState extends State<HomePage>
         ),
         body: TabBarView(
           children:
-              tabs.map((tabLabel) {
-                if (_currentView == ViewMode.week) {
-                  // Affichage classique semaine (jours, matin/après-midi)
-                  final events = _groupedEvents[tabLabel] ?? [];
-
-                  if (events.isEmpty) {
-                    final weekday = tabLabel.split(' ').first;
-                    return Center(child: Text('Pas de cours ce $weekday'));
-                  }
-
-                  final isMorning =
-                      (DateTime d) =>
-                          d.hour < 12 &&
-                          (d.hour > 7 || (d.hour == 7 && d.minute >= 45));
-                  final isAfternoon =
-                      (DateTime d) => d.hour >= 12 && d.hour < 18;
-
-                  final morning =
-                      events
-                          .where((e) => e.start != null && isMorning(e.start!))
-                          .toList();
-                  final afternoon =
-                      events
-                          .where(
-                            (e) => e.start != null && isAfternoon(e.start!),
-                          )
-                          .toList();
-
-                  // Combine les sections dans un seul ListView pour de meilleures perfs
-                  return ListView(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    children: [
-                      if (morning.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text(
-                            'Matin',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: morning.length,
-                          itemBuilder: (context, i) {
-                            final e = morning[i];
-                            return _EventCardDialog(event: e);
-                          },
-                        ),
-                      ],
-                      if (afternoon.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text(
-                            'Après-midi',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: afternoon.length,
-                          itemBuilder: (context, i) {
-                            final e = afternoon[i];
-                            return _EventCardDialog(event: e);
-                          },
-                        ),
-                      ],
-                    ],
-                  );
-                } else {
-                  // Affichage mois : chaque tab = une semaine, séparé par jours
-                  final eventsOfWeek = _groupedEventsByWeek[tabLabel] ?? [];
-                  final daysOfWeek = _getDaysOfWeek(tabLabel); // à implémenter
-                  return ListView(
-                    children:
-                        daysOfWeek.map((day) {
-                          final eventsOfDay =
-                              eventsOfWeek
-                                  .where(
-                                    (e) =>
-                                        DateFormat(
-                                          'EEEE d MMMM yyyy',
-                                          'fr_FR',
-                                        ).format(e.start!) ==
-                                        day,
-                                  )
-                                  .toList();
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  day,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              ...eventsOfDay
-                                  .map((e) => _EventCardDialog(event: e))
-                                  .toList(),
-                            ],
-                          );
-                        }).toList(),
-                  );
+              _daysWithEvents.map((dayLabel) {
+                final events = _groupedEvents[dayLabel] ?? [];
+                if (events.isEmpty) {
+                  final weekday = dayLabel.split(' ').first;
+                  return Center(child: Text('Pas de cours ce $weekday'));
                 }
+
+                final isMorning =
+                    (DateTime d) =>
+                        d.hour < 12 &&
+                        (d.hour > 7 || (d.hour == 7 && d.minute >= 45));
+                final isAfternoon = (DateTime d) => d.hour >= 12 && d.hour < 18;
+
+                final morning =
+                    events
+                        .where((e) => e.start != null && isMorning(e.start!))
+                        .toList();
+                final afternoon =
+                    events
+                        .where((e) => e.start != null && isAfternoon(e.start!))
+                        .toList();
+
+                return ListView(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  children: [
+                    if (morning.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'Matin',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      ...morning.map((e) => _EventCardDialog(event: e)),
+                    ],
+                    if (afternoon.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'Après-midi',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      ...afternoon.map((e) => _EventCardDialog(event: e)),
+                    ],
+                  ],
+                );
               }).toList(),
         ),
       ),
