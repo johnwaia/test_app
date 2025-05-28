@@ -16,8 +16,8 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
   late final ScheduleService scheduleService;
   late final tz.Location tzLocation;
 
-  final controller1 = TextEditingController();
-  final controller2 = TextEditingController();
+  int studentCount = 2;
+  final List<TextEditingController> controllers = [];
 
   String? resultText;
   bool isLoading = false;
@@ -28,12 +28,23 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
     scheduleService = ScheduleService(http.Client());
     tzdata.initializeTimeZones();
     tzLocation = tz.getLocation('Pacific/Noumea');
+    _updateControllers();
+  }
+
+  void _updateControllers() {
+    while (controllers.length < studentCount) {
+      controllers.add(TextEditingController());
+    }
+    while (controllers.length > studentCount) {
+      controllers.removeLast().dispose();
+    }
   }
 
   @override
   void dispose() {
-    controller1.dispose();
-    controller2.dispose();
+    for (final c in controllers) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -69,8 +80,18 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
     return free;
   }
 
-  List<TimeRange> intersectSlots(List<TimeRange> a, List<TimeRange> b) {
-    List<TimeRange> result = [];
+  List<TimeRange> intersectSlots(List<List<TimeRange>> slotsLists) {
+    if (slotsLists.isEmpty) return [];
+    var result = slotsLists.first;
+    for (int i = 1; i < slotsLists.length; i++) {
+      result = _intersectTwo(result, slotsLists[i]);
+      if (result.isEmpty) break;
+    }
+    return result;
+  }
+
+  List<TimeRange> _intersectTwo(List<TimeRange> a, List<TimeRange> b) {
+    final result = <TimeRange>[];
     for (final slotA in a) {
       for (final slotB in b) {
         final start =
@@ -90,12 +111,23 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
       resultText = null;
     });
 
-    final id1 = controller1.text.trim();
-    final id2 = controller2.text.trim();
+    final ids =
+        controllers
+            .map((c) => c.text.trim())
+            .where((id) => id.isNotEmpty)
+            .toList();
+    if (ids.length != studentCount) {
+      setState(() {
+        isLoading = false;
+        resultText = "Veuillez renseigner tous les identifiants.";
+      });
+      return;
+    }
 
     try {
-      final events1 = await scheduleService.fetchSchedule(id1, tzLocation);
-      final events2 = await scheduleService.fetchSchedule(id2, tzLocation);
+      final allEvents = await Future.wait(
+        ids.map((id) => scheduleService.fetchSchedule(id, tzLocation)),
+      );
 
       final now = DateTime.now();
       final days =
@@ -111,9 +143,9 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
       const weekDays = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 
       for (final day in days) {
-        final free1 = getFreeSlots(events1, day);
-        final free2 = getFreeSlots(events2, day);
-        final common = intersectSlots(free1, free2);
+        final slotsLists =
+            allEvents.map((events) => getFreeSlots(events, day)).toList();
+        final common = intersectSlots(slotsLists);
         if (common.isNotEmpty) {
           buffer.writeln(
             "${weekDays[day.weekday - 1]} ${day.day}/${day.month} :",
@@ -138,7 +170,7 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
 
   List<Widget> _buildSlotsCards(String slotsText) {
     final lines = slotsText.split('\n');
-    List<Widget> cards = [];
+    final cards = <Widget>[];
     String? currentDay;
     List<String> slots = [];
 
@@ -191,28 +223,53 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               const Text(
-                'Entrez les identifiants des deux étudiants :',
+                'Choisissez le nombre d\'étudiants puis entrez les identifiants :',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               const SizedBox(height: 24),
-              TextField(
-                controller: controller1,
-                decoration: const InputDecoration(
-                  labelText: 'Identifiant étudiant 1',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
+              Row(
+                children: [
+                  const Text(
+                    'Nombre d\'étudiants :',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(width: 16),
+                  DropdownButton<int>(
+                    value: studentCount,
+                    items:
+                        List.generate(6, (i) => i + 2)
+                            .map(
+                              (n) =>
+                                  DropdownMenuItem(value: n, child: Text('$n')),
+                            )
+                            .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          studentCount = val;
+                          _updateControllers();
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...List.generate(
+                studentCount,
+                (i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextField(
+                    controller: controllers[i],
+                    decoration: InputDecoration(
+                      labelText: 'Identifiant étudiant ${i + 1}',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.person),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: controller2,
-                decoration: const InputDecoration(
-                  labelText: 'Identifiant étudiant 2',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-              ),
-              const SizedBox(height: 24),
               ElevatedButton.icon(
                 icon: const Icon(Icons.search),
                 label: const Text('Trouver les créneaux communs'),
