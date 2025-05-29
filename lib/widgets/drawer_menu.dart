@@ -38,17 +38,7 @@ class DrawerMenu extends StatelessWidget {
             leading: const Icon(Icons.exit_to_app, color: Colors.red),
             title: const Text('Quitter', style: TextStyle(color: Colors.red)),
             onTap: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder:
-                      (_) => UserIdInputView(
-                        controller: TextEditingController(),
-                        onSubmit: () {},
-                        title: 'Bienvenue',
-                      ),
-                ),
-                (route) => false,
-              );
+              Navigator.of(context).popUntil((route) => route.isFirst);
             },
           ),
         ],
