@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:intl/intl.dart';
 import '../services/schedule_service.dart';
 import '../models/ics_event.dart';
 import '../models/time_range.dart';
@@ -27,6 +28,8 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
 
   List<String> _tabLabels = [];
   Map<String, List<TimeRange>> _daySlots = {};
+
+  DateTime _referenceDate = DateTime.now();
 
   @override
   void initState() {
@@ -187,6 +190,14 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
     }
   }
 
+  void _navigateWeek(int days) {
+    setState(() {
+      _referenceDate = _referenceDate.add(Duration(days: days));
+    });
+    // Relance la recherche avec la nouvelle semaine
+    findCommonSlots();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -254,6 +265,22 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left),
+                            onPressed: () => _navigateWeek(-7),
+                          ),
+                          Text(
+                            'Semaine du ${DateFormat('d MMMM', 'fr_FR').format(_referenceDate.subtract(Duration(days: _referenceDate.weekday - 1)))}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right),
+                            onPressed: () => _navigateWeek(7),
+                          ),
+                        ],
+                      ),
                       TabBar(
                         isScrollable: true,
                         tabs:
