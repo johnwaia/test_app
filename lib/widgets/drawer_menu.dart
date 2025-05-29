@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/view_mode.dart';
-import '../views/user_id_input_view.dart';
 import '../views/MeetingOrganizerView.dart';
 
 class DrawerMenu extends StatelessWidget {
   final ViewMode currentView;
   final ValueChanged<ViewMode> onChange;
+  final String connectedStudentId; // <-- Ajoute cette ligne
 
   const DrawerMenu({
     super.key,
     required this.currentView,
     required this.onChange,
+    required this.connectedStudentId, // <-- Ajoute cette ligne
   });
 
   @override
@@ -29,7 +30,11 @@ class DrawerMenu extends StatelessWidget {
             title: const Text('Organiser une réunion'),
             onTap: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MeetingOrganizerView()),
+                MaterialPageRoute(
+                  builder: (_) => MeetingOrganizerView(
+                    connectedStudentId: connectedStudentId, // <-- OBLIGATOIRE
+                  ),
+                ),
               );
             },
           ),
@@ -42,6 +47,31 @@ class DrawerMenu extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  final ViewMode _currentView = ViewMode.week;
+
+  void _onViewModeChange(ViewMode viewMode) {
+    // Handle view mode change
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Mon application'),
+      ),
+      drawer: DrawerMenu(
+        currentView: _currentView,
+        onChange: _onViewModeChange,
+        connectedStudentId: '123', // <-- Ajoute une valeur par défaut ici
+      ),
+      body: Center(
+        child: Text('Contenu de la page'),
       ),
     );
   }

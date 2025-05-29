@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
 }
 
 class _RootPage extends StatefulWidget {
-  const _RootPage({super.key});
+  const _RootPage();
   @override
   State<_RootPage> createState() => _RootPageState();
 }
@@ -63,7 +63,12 @@ class _RootPageState extends State<_RootPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => HomePage(title: homePageTitle, events: events),
+          builder:
+              (_) => HomePage(
+                title: homePageTitle,
+                events: events,
+                connectedStudentId: userId,
+              ),
         ),
       );
     } catch (e) {

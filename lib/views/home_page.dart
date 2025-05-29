@@ -12,8 +12,14 @@ const String defaultRoomText = 'Salle non spécifiée';
 class HomePage extends StatefulWidget {
   final String title;
   final List<IcsEvent> events;
+  final String connectedStudentId;
 
-  const HomePage({super.key, required this.title, required this.events});
+  const HomePage({
+    super.key,
+    required this.title,
+    required this.events,
+    required this.connectedStudentId,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -130,6 +136,7 @@ class _HomePageState extends State<HomePage> {
         drawer: DrawerMenu(
           currentView: _currentView,
           onChange: _onViewModeChange,
+          connectedStudentId: widget.connectedStudentId,
         ),
         body: TabBarView(
           children:

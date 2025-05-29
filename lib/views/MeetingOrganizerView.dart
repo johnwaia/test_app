@@ -4,9 +4,12 @@ import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 import '../services/schedule_service.dart';
 import '../models/ics_event.dart';
+import '../models/time_range.dart';
 
 class MeetingOrganizerView extends StatefulWidget {
-  const MeetingOrganizerView({super.key});
+  final String connectedStudentId; // <-- Ajoute cette ligne
+
+  const MeetingOrganizerView({super.key, required this.connectedStudentId});
 
   @override
   State<MeetingOrganizerView> createState() => _MeetingOrganizerViewState();
@@ -21,6 +24,9 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
 
   String? resultText;
   bool isLoading = false;
+
+  List<String> _tabLabels = [];
+  Map<String, List<TimeRange>> _daySlots = {};
 
   @override
   void initState() {
@@ -37,6 +43,10 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
     }
     while (controllers.length > studentCount) {
       controllers.removeLast().dispose();
+    }
+    // Préremplir le premier champ avec l'identifiant connecté
+    if (controllers.isNotEmpty) {
+      controllers[0].text = widget.connectedStudentId;
     }
   }
 
@@ -109,6 +119,8 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
     setState(() {
       isLoading = true;
       resultText = null;
+      _tabLabels = [];
+      _daySlots = {};
     });
 
     final ids =
@@ -116,10 +128,21 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
             .map((c) => c.text.trim())
             .where((id) => id.isNotEmpty)
             .toList();
+
     if (ids.length != studentCount) {
       setState(() {
         isLoading = false;
         resultText = "Veuillez renseigner tous les identifiants.";
+      });
+      return;
+    }
+
+    // Vérifie les doublons
+    final idsSet = ids.toSet();
+    if (idsSet.length != ids.length) {
+      setState(() {
+        isLoading = false;
+        resultText = "Chaque identifiant doit être unique.";
       });
       return;
     }
@@ -129,36 +152,32 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
         ids.map((id) => scheduleService.fetchSchedule(id, tzLocation)),
       );
 
+      // Affichage semaine courante (lundi à vendredi)
       final now = DateTime.now();
-      final days =
-          List.generate(7, (i) => now.add(Duration(days: i)))
-              .where(
-                (day) =>
-                    day.weekday >= DateTime.monday &&
-                    day.weekday <= DateTime.friday,
-              )
-              .toList();
+      final monday = now.subtract(
+        Duration(days: now.weekday - DateTime.monday),
+      );
+      final days = List.generate(5, (i) => monday.add(Duration(days: i)));
 
-      final buffer = StringBuffer();
+      final Map<String, List<TimeRange>> daySlots = {};
+      final List<String> tabLabels = [];
       const weekDays = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 
-      for (final day in days) {
+      for (int i = 0; i < days.length; i++) {
+        final day = days[i];
         final slotsLists =
             allEvents.map((events) => getFreeSlots(events, day)).toList();
         final common = intersectSlots(slotsLists);
-        if (common.isNotEmpty) {
-          buffer.writeln(
-            "${weekDays[day.weekday - 1]} ${day.day}/${day.month} :",
-          );
-          for (final slot in common) {
-            buffer.writeln("  - $slot");
-          }
-        }
+        final label = "${weekDays[i]} ${day.day}/${day.month}";
+        tabLabels.add(label);
+        daySlots[label] = common;
       }
 
       setState(() {
         isLoading = false;
-        resultText = buffer.isEmpty ? null : buffer.toString();
+        _tabLabels = tabLabels;
+        _daySlots = daySlots;
+        resultText = null;
       });
     } catch (e) {
       setState(() {
@@ -166,50 +185,6 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
         resultText = "Erreur lors de la récupération des emplois du temps.";
       });
     }
-  }
-
-  List<Widget> _buildSlotsCards(String slotsText) {
-    final lines = slotsText.split('\n');
-    final cards = <Widget>[];
-    String? currentDay;
-    List<String> slots = [];
-
-    for (final line in lines) {
-      if (line.trim().isEmpty) continue;
-      if (!line.startsWith('  - ')) {
-        if (currentDay != null && slots.isNotEmpty) {
-          cards.add(_buildDayCard(currentDay, slots));
-        }
-        currentDay = line;
-        slots = [];
-      } else {
-        slots.add(line.replaceFirst('  - ', ''));
-      }
-    }
-    if (currentDay != null && slots.isNotEmpty) {
-      cards.add(_buildDayCard(currentDay, slots));
-    }
-    return cards;
-  }
-
-  Widget _buildDayCard(String day, List<String> slots) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              day,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            ...slots.map((s) => Text(s, style: const TextStyle(fontSize: 15))),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -220,12 +195,8 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
         padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Choisissez le nombre d\'étudiants puis entrez les identifiants :',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
               const SizedBox(height: 24),
               Row(
                 children: [
@@ -277,11 +248,103 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
               ),
               const SizedBox(height: 32),
               if (isLoading) const CircularProgressIndicator(),
-              if (resultText != null) ..._buildSlotsCards(resultText!),
-              if (!isLoading && resultText == null)
-                const Text(
-                  "Aucun créneau commun trouvé cette semaine (hors week-ends).",
-                  style: TextStyle(color: Colors.red, fontSize: 16),
+              if (_tabLabels.isNotEmpty)
+                DefaultTabController(
+                  length: _tabLabels.length,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TabBar(
+                        isScrollable: true,
+                        tabs:
+                            _tabLabels
+                                .map((label) => Tab(text: label))
+                                .toList(),
+                      ),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.4,
+                        child: TabBarView(
+                          children:
+                              _tabLabels.map((dayLabel) {
+                                final slots = _daySlots[dayLabel] ?? [];
+                                if (slots.isEmpty) {
+                                  final weekday = dayLabel.split(' ').first;
+                                  return Center(
+                                    child: Text(
+                                      'Pas de créneau commun ce $weekday',
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  );
+                                }
+
+                                final isMorning =
+                                    (DateTime d) =>
+                                        d.hour < 12 &&
+                                        (d.hour > 7 ||
+                                            (d.hour == 7 && d.minute >= 45));
+                                final isAfternoon =
+                                    (DateTime d) => d.hour >= 12 && d.hour < 18;
+
+                                final morning =
+                                    slots
+                                        .where((tr) => isMorning(tr.start))
+                                        .toList();
+                                final afternoon =
+                                    slots
+                                        .where((tr) => isAfternoon(tr.start))
+                                        .toList();
+
+                                return ListView(
+                                  padding: const EdgeInsets.only(bottom: 24),
+                                  children: [
+                                    if (morning.isNotEmpty) ...[
+                                      const Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text(
+                                          'Matin',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      ...morning.map(
+                                        (tr) => _CommonSlotCard(
+                                          start: tr.start,
+                                          end: tr.end,
+                                        ),
+                                      ),
+                                    ],
+                                    if (afternoon.isNotEmpty) ...[
+                                      const Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text(
+                                          'Après-midi',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      ...afternoon.map(
+                                        (tr) => _CommonSlotCard(
+                                          start: tr.start,
+                                          end: tr.end,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                );
+                              }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (!isLoading && _tabLabels.isEmpty && resultText != null)
+                Text(
+                  resultText!,
+                  style: const TextStyle(color: Colors.red, fontSize: 16),
                 ),
             ],
           ),
@@ -291,13 +354,142 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
   }
 }
 
-class TimeRange {
-  final DateTime start;
-  final DateTime end;
-  TimeRange(this.start, this.end);
+class CommonSlotsView extends StatelessWidget {
+  final List<String> tabLabels;
+  final Map<String, List<TimeRange>> daySlots;
+
+  const CommonSlotsView({
+    super.key,
+    required this.tabLabels,
+    required this.daySlots,
+  });
 
   @override
-  String toString() =>
-      "${start.hour.toString().padLeft(2, '0')}h${start.minute.toString().padLeft(2, '0')} - "
-      "${end.hour.toString().padLeft(2, '0')}h${end.minute.toString().padLeft(2, '0')}";
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: tabLabels.length,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TabBar(
+            isScrollable: true,
+            tabs: tabLabels.map((label) => Tab(text: label)).toList(),
+          ),
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.4,
+            child: TabBarView(
+              children:
+                  tabLabels.map((dayLabel) {
+                    final slots = daySlots[dayLabel] ?? [];
+                    if (slots.isEmpty) {
+                      final weekday = dayLabel.split(' ').first;
+                      return Center(
+                        child: Text(
+                          'Pas de créneau commun ce $weekday',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      );
+                    }
+
+                    final isMorning =
+                        (DateTime d) =>
+                            d.hour < 12 &&
+                            (d.hour > 7 || (d.hour == 7 && d.minute >= 45));
+                    final isAfternoon =
+                        (DateTime d) => d.hour >= 12 && d.hour < 18;
+
+                    final morning =
+                        slots.where((tr) => isMorning(tr.start)).toList();
+                    final afternoon =
+                        slots.where((tr) => isAfternoon(tr.start)).toList();
+
+                    return ListView(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      children: [
+                        if (morning.isNotEmpty) ...[
+                          const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text(
+                              'Matin',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          ...morning.map(
+                            (tr) =>
+                                _CommonSlotCard(start: tr.start, end: tr.end),
+                          ),
+                        ],
+                        if (afternoon.isNotEmpty) ...[
+                          const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text(
+                              'Après-midi',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          ...afternoon.map(
+                            (tr) =>
+                                _CommonSlotCard(start: tr.start, end: tr.end),
+                          ),
+                        ],
+                      ],
+                    );
+                  }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CommonSlotCard extends StatelessWidget {
+  final DateTime start;
+  final DateTime end;
+  const _CommonSlotCard({required this.start, required this.end});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: Card(
+        elevation: 10,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        color: Colors.blue.shade100,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.schedule, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')} - '
+                    '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "Créneau commun disponible",
+                style: TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
