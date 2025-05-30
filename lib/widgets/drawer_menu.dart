@@ -5,13 +5,15 @@ import '../views/MeetingOrganizerView.dart';
 class DrawerMenu extends StatelessWidget {
   final ViewMode currentView;
   final ValueChanged<ViewMode> onChange;
-  final String connectedStudentId; // <-- Ajoute cette ligne
+  final String connectedStudentId;
+  final VoidCallback? onAddPersonalEvent;
 
   const DrawerMenu({
     super.key,
     required this.currentView,
     required this.onChange,
-    required this.connectedStudentId, // <-- Ajoute cette ligne
+    required this.connectedStudentId,
+    this.onAddPersonalEvent,
   });
 
   @override
@@ -31,11 +33,22 @@ class DrawerMenu extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => MeetingOrganizerView(
-                    connectedStudentId: connectedStudentId, // <-- OBLIGATOIRE
-                  ),
+                  builder:
+                      (_) => MeetingOrganizerView(
+                        connectedStudentId: connectedStudentId,
+                      ),
                 ),
               );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.event),
+            title: const Text('Créer un événement personnel'),
+            onTap: () {
+              Navigator.of(context).pop();
+              if (onAddPersonalEvent != null) {
+                onAddPersonalEvent!();
+              }
             },
           ),
           const Divider(),
@@ -52,6 +65,7 @@ class DrawerMenu extends StatelessWidget {
   }
 }
 
+// Exemple d'utilisation dans HomePage :
 class HomePage extends StatelessWidget {
   final ViewMode _currentView = ViewMode.week;
 
@@ -59,20 +73,22 @@ class HomePage extends StatelessWidget {
     // Handle view mode change
   }
 
+  void _showAddPersonalEventView(BuildContext context) {
+    // Ouvre la vue d'ajout d'événement personnel
+    // À implémenter dans la version finale
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mon application'),
-      ),
+      appBar: AppBar(title: const Text('Mon application')),
       drawer: DrawerMenu(
         currentView: _currentView,
         onChange: _onViewModeChange,
-        connectedStudentId: '123', // <-- Ajoute une valeur par défaut ici
+        connectedStudentId: '123',
+        onAddPersonalEvent: () => _showAddPersonalEventView(context),
       ),
-      body: Center(
-        child: Text('Contenu de la page'),
-      ),
+      body: const Center(child: Text('Contenu de la page')),
     );
   }
 }
