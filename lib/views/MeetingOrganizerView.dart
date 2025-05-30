@@ -8,7 +8,7 @@ import '../models/ics_event.dart';
 import '../models/time_range.dart';
 
 class MeetingOrganizerView extends StatefulWidget {
-  final String connectedStudentId; // <-- Ajoute cette ligne
+  final String connectedStudentId;
 
   const MeetingOrganizerView({super.key, required this.connectedStudentId});
 
@@ -47,7 +47,7 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
     while (controllers.length > studentCount) {
       controllers.removeLast().dispose();
     }
-    // Préremplir le premier champ avec l'identifiant connecté
+
     if (controllers.isNotEmpty) {
       controllers[0].text = widget.connectedStudentId;
     }
@@ -140,7 +140,6 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
       return;
     }
 
-    // Vérifie les doublons
     final idsSet = ids.toSet();
     if (idsSet.length != ids.length) {
       setState(() {
@@ -155,7 +154,6 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
         ids.map((id) => scheduleService.fetchSchedule(id, tzLocation)),
       );
 
-      // Affichage semaine courante (lundi à vendredi)
       final now = DateTime.now();
       final monday = now.subtract(
         Duration(days: now.weekday - DateTime.monday),
@@ -194,7 +192,6 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
     setState(() {
       _referenceDate = _referenceDate.add(Duration(days: days));
     });
-    // Relance la recherche avec la nouvelle semaine
     findCommonSlots();
   }
 
