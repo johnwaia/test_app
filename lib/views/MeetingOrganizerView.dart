@@ -6,11 +6,17 @@ import 'package:intl/intl.dart';
 import '../services/schedule_service.dart';
 import '../models/ics_event.dart';
 import '../models/time_range.dart';
+import '../models/personalEvent.dart';
 
 class MeetingOrganizerView extends StatefulWidget {
   final String connectedStudentId;
+  final List<PersonalEvent> personalEvents; // <-- AJOUTE cette ligne
 
-  const MeetingOrganizerView({super.key, required this.connectedStudentId});
+  const MeetingOrganizerView({
+    super.key,
+    required this.connectedStudentId,
+    required this.personalEvents, // <-- AJOUTE cette ligne
+  });
 
   @override
   State<MeetingOrganizerView> createState() => _MeetingOrganizerViewState();
@@ -290,7 +296,10 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
                         child: TabBarView(
                           children:
                               _tabLabels.map((dayLabel) {
-                                final slots = _daySlots[dayLabel] ?? [];
+                                final slots = subtractPersonalEvents(
+                                  _daySlots[dayLabel] ?? [],
+                                  widget.personalEvents,
+                                );
                                 if (slots.isEmpty) {
                                   final weekday = dayLabel.split(' ').first;
                                   return Center(
@@ -516,4 +525,50 @@ class _CommonSlotCard extends StatelessWidget {
       ),
     );
   }
+}
+
+bool isSlotAvailable(
+  DateTime slotStart,
+  DateTime slotEnd,
+  List<PersonalEvent> personalEvents,
+) {
+  for (final event in personalEvents) {
+    if (slotStart.isBefore(event.end) && slotEnd.isAfter(event.start)) {
+      // Le créneau chevauche un événement personnel
+      return false;
+    }
+  }
+  return true;
+}
+
+List<TimeRange> subtractPersonalEvents(
+  List<TimeRange> slots,
+  List<PersonalEvent> personalEvents,
+) {
+  List<TimeRange> result = [];
+  for (final slot in slots) {
+    // Commence avec le créneau complet
+    List<TimeRange> current = [slot];
+    for (final event in personalEvents) {
+      List<TimeRange> next = [];
+      for (final range in current) {
+        // Si pas de chevauchement, on garde tel quel
+        if (event.end.isBefore(range.start) || event.start.isAfter(range.end)) {
+          next.add(range);
+        } else {
+          // Découpe à gauche
+          if (event.start.isAfter(range.start)) {
+            next.add(TimeRange(range.start, event.start));
+          }
+          // Découpe à droite
+          if (event.end.isBefore(range.end)) {
+            next.add(TimeRange(event.end, range.end));
+          }
+        }
+      }
+      current = next;
+    }
+    result.addAll(current);
+  }
+  return result;
 }

@@ -6,7 +6,7 @@ import '../utils/event_utils.dart';
 import '../widgets/drawer_menu.dart';
 import '../models/view_mode.dart';
 import 'addpersonalEvent.dart';
-import '../views/personalEvent.dart';
+import '../models/personalEvent.dart';
 
 const String noEventsText = 'Aucun événement à venir.';
 const String defaultRoomText = 'Salle non spécifiée';
@@ -174,6 +174,7 @@ class _HomePageState extends State<HomePage> {
           onChange: _onViewModeChange,
           connectedStudentId: widget.connectedStudentId,
           onAddPersonalEvent: _showAddPersonalEventView,
+          personalEvents: _personalEvents, // <-- Ajoute ce paramètre
         ),
         body: TabBarView(
           children:

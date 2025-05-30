@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/view_mode.dart';
 import '../views/MeetingOrganizerView.dart';
+import '../models/personalEvent.dart';
 
 class DrawerMenu extends StatelessWidget {
   final ViewMode currentView;
   final ValueChanged<ViewMode> onChange;
   final String connectedStudentId;
   final VoidCallback? onAddPersonalEvent;
+  final List<PersonalEvent> personalEvents;
 
   const DrawerMenu({
     super.key,
@@ -14,6 +16,7 @@ class DrawerMenu extends StatelessWidget {
     required this.onChange,
     required this.connectedStudentId,
     this.onAddPersonalEvent,
+    required this.personalEvents,
   });
 
   @override
@@ -36,6 +39,7 @@ class DrawerMenu extends StatelessWidget {
                   builder:
                       (_) => MeetingOrganizerView(
                         connectedStudentId: connectedStudentId,
+                        personalEvents: personalEvents,
                       ),
                 ),
               );
@@ -87,8 +91,23 @@ class HomePage extends StatelessWidget {
         onChange: _onViewModeChange,
         connectedStudentId: '123',
         onAddPersonalEvent: () => _showAddPersonalEventView(context),
+        personalEvents: [], // Ajoutez ici la liste des événements personnels
       ),
       body: const Center(child: Text('Contenu de la page')),
     );
   }
+}
+
+bool isSlotAvailable(
+  DateTime slotStart,
+  DateTime slotEnd,
+  List<PersonalEvent> personalEvents,
+) {
+  for (final event in personalEvents) {
+    if (slotStart.isBefore(event.end) && slotEnd.isAfter(event.start)) {
+      // Le créneau chevauche un événement personnel
+      return false;
+    }
+  }
+  return true;
 }
