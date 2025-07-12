@@ -10,12 +10,14 @@ import '../models/personalEvent.dart';
 
 class MeetingOrganizerView extends StatefulWidget {
   final String connectedStudentId;
-  final List<PersonalEvent> personalEvents; // <-- AJOUTE cette ligne
+  final List<PersonalEvent> personalEvents;
+  final void Function(PersonalEvent) onEventCreated;
 
   const MeetingOrganizerView({
     super.key,
     required this.connectedStudentId,
-    required this.personalEvents, // <-- AJOUTE cette ligne
+    required this.personalEvents,
+    required this.onEventCreated,
   });
 
   @override
@@ -345,6 +347,11 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
                                         (tr) => _CommonSlotCard(
                                           start: tr.start,
                                           end: tr.end,
+                                          studentIds: controllers
+                                              .map((c) => c.text.trim())
+                                              .where((id) => id.isNotEmpty)
+                                              .toList(),
+                                          onEventCreated: widget.onEventCreated,
                                         ),
                                       ),
                                     ],
@@ -363,6 +370,11 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
                                         (tr) => _CommonSlotCard(
                                           start: tr.start,
                                           end: tr.end,
+                                          studentIds: controllers
+                                              .map((c) => c.text.trim())
+                                              .where((id) => id.isNotEmpty)
+                                              .toList(),
+                                          onEventCreated: widget.onEventCreated,
                                         ),
                                       ),
                                     ],
@@ -387,139 +399,103 @@ class _MeetingOrganizerViewState extends State<MeetingOrganizerView> {
   }
 }
 
-class CommonSlotsView extends StatelessWidget {
-  final List<String> tabLabels;
-  final Map<String, List<TimeRange>> daySlots;
+class _CommonSlotCard extends StatelessWidget {
+  final DateTime start;
+  final DateTime end;
+  final List<String> studentIds;
+  final void Function(PersonalEvent) onEventCreated;
 
-  const CommonSlotsView({
-    super.key,
-    required this.tabLabels,
-    required this.daySlots,
+  const _CommonSlotCard({
+    required this.start,
+    required this.end,
+    required this.studentIds,
+    required this.onEventCreated,
   });
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: tabLabels.length,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TabBar(
-            isScrollable: true,
-            tabs: tabLabels.map((label) => Tab(text: label)).toList(),
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: () async {
+        // Demande à l'utilisateur de choisir l'heure de début
+        final pickedStart = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay(hour: start.hour, minute: start.minute),
+          helpText: "Heure de début",
+        );
+        if (pickedStart == null) return;
+
+        // Demande à l'utilisateur de choisir l'heure de fin
+        final pickedEnd = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay(hour: end.hour, minute: end.minute),
+          helpText: "Heure de fin",
+        );
+        if (pickedEnd == null) return;
+
+        // Construit les DateTime choisis
+        final chosenStart = DateTime(
+          start.year, start.month, start.day, pickedStart.hour, pickedStart.minute);
+        final chosenEnd = DateTime(
+          end.year, end.month, end.day, pickedEnd.hour, pickedEnd.minute);
+
+        // Vérifie que l'intervalle choisi est bien dans le créneau
+        if (chosenStart.isBefore(start) ||
+            chosenEnd.isAfter(end) ||
+            !chosenStart.isBefore(chosenEnd)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Heures invalides pour ce créneau.")),
+          );
+          return;
+        }
+
+        final title = 'Réunion avec ${studentIds.join(', ')}';
+        final event = PersonalEvent(
+          title: title,
+          start: chosenStart,
+          end: chosenEnd,
+          description: '',
+          type: EventType.meeting, // <-- IMPORTANT !
+        );
+        onEventCreated(event); // <-- Appelle uniquement le callback
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Événement créé : $title')),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        child: Card(
+          elevation: 10,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
           ),
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.4,
-            child: TabBarView(
-              children:
-                  tabLabels.map((dayLabel) {
-                    final slots = daySlots[dayLabel] ?? [];
-                    if (slots.isEmpty) {
-                      final weekday = dayLabel.split(' ').first;
-                      return Center(
-                        child: Text(
-                          'Pas de créneau commun ce $weekday',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      );
-                    }
-
-                    final isMorning =
-                        (DateTime d) =>
-                            d.hour < 12 &&
-                            (d.hour > 7 || (d.hour == 7 && d.minute >= 45));
-                    final isAfternoon =
-                        (DateTime d) => d.hour >= 12 && d.hour < 18;
-
-                    final morning =
-                        slots.where((tr) => isMorning(tr.start)).toList();
-                    final afternoon =
-                        slots.where((tr) => isAfternoon(tr.start)).toList();
-
-                    return ListView(
-                      padding: const EdgeInsets.only(bottom: 24),
-                      children: [
-                        if (morning.isNotEmpty) ...[
-                          const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Text(
-                              'Matin',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          ...morning.map(
-                            (tr) =>
-                                _CommonSlotCard(start: tr.start, end: tr.end),
-                          ),
-                        ],
-                        if (afternoon.isNotEmpty) ...[
-                          const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Text(
-                              'Après-midi',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          ...afternoon.map(
-                            (tr) =>
-                                _CommonSlotCard(start: tr.start, end: tr.end),
-                          ),
-                        ],
-                      ],
-                    );
-                  }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CommonSlotCard extends StatelessWidget {
-  final DateTime start;
-  final DateTime end;
-  const _CommonSlotCard({required this.start, required this.end});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      child: Card(
-        elevation: 10,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        color: Colors.blue.shade100,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.schedule, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')} - '
-                    '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+          color: Colors.blue.shade100,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.schedule, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')} - '
+                      '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                "Créneau commun disponible",
-                style: TextStyle(fontSize: 14),
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  "Créneau commun disponible",
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -547,20 +523,16 @@ List<TimeRange> subtractPersonalEvents(
 ) {
   List<TimeRange> result = [];
   for (final slot in slots) {
-    // Commence avec le créneau complet
     List<TimeRange> current = [slot];
     for (final event in personalEvents) {
       List<TimeRange> next = [];
       for (final range in current) {
-        // Si pas de chevauchement, on garde tel quel
         if (event.end.isBefore(range.start) || event.start.isAfter(range.end)) {
           next.add(range);
         } else {
-          // Découpe à gauche
           if (event.start.isAfter(range.start)) {
             next.add(TimeRange(range.start, event.start));
           }
-          // Découpe à droite
           if (event.end.isBefore(range.end)) {
             next.add(TimeRange(event.end, range.end));
           }

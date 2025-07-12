@@ -36,11 +36,14 @@ class DrawerMenu extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder:
-                      (_) => MeetingOrganizerView(
-                        connectedStudentId: connectedStudentId,
-                        personalEvents: personalEvents,
-                      ),
+                  builder: (_) => MeetingOrganizerView(
+                    connectedStudentId: connectedStudentId,
+                    personalEvents: personalEvents,
+                    onEventCreated: (event) {
+                      Navigator.of(context).pop(); // ferme le drawer
+                      // Ajoute ici un callback si tu veux rafraîchir HomePage
+                    },
+                  ),
                 ),
               );
             },

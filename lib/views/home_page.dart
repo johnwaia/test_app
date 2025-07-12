@@ -7,6 +7,7 @@ import '../widgets/drawer_menu.dart';
 import '../models/view_mode.dart';
 import 'addpersonalEvent.dart';
 import '../models/personalEvent.dart';
+import 'MeetingOrganizerView.dart';
 
 const String noEventsText = 'Aucun événement à venir.';
 const String defaultRoomText = 'Salle non spécifiée';
@@ -122,6 +123,23 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _openMeetingOrganizer(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MeetingOrganizerView(
+          connectedStudentId: widget.connectedStudentId,
+          personalEvents: _personalEvents,
+          onEventCreated: (event) {
+            setState(() {
+              _personalEvents.add(event);
+              _groupEventsByDay();
+            });
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.events.isEmpty || _daysWithEvents.isEmpty) {
@@ -174,7 +192,12 @@ class _HomePageState extends State<HomePage> {
           onChange: _onViewModeChange,
           connectedStudentId: widget.connectedStudentId,
           onAddPersonalEvent: _showAddPersonalEventView,
-          personalEvents: _personalEvents, // <-- Ajoute ce paramètre
+          personalEvents: _personalEvents,
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _openMeetingOrganizer(context),
+          child: const Icon(Icons.group_add),
+          tooltip: 'Organiser une réunion',
         ),
         body: TabBarView(
           children:
@@ -384,8 +407,8 @@ class _EventCardDialog extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
+      )
+   );
   }
 }
 
@@ -400,7 +423,9 @@ class _PersonalEventCard extends StatelessWidget {
       child: Card(
         elevation: 10,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        color: Colors.green.shade100,
+        color: event.type == EventType.meeting
+            ? Colors.blue.shade100
+            : Colors.green.shade100,
         child: InkWell(
           borderRadius: BorderRadius.circular(22),
           onTap: () {
@@ -448,7 +473,12 @@ class _PersonalEventCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.event, size: 16),
+                    Icon(
+                      event.type == EventType.meeting
+                          ? Icons.groups
+                          : Icons.event,
+                      size: 16,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -478,6 +508,6 @@ class _PersonalEventCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+   );
   }
 }
