@@ -19,7 +19,7 @@ Consultez votre emploi du temps personnalisé, organisez des réunions entre ét
 ## 📸 Aperçu de l’application
 
 <p align="center">
-  <img src="assets/screenshots/logo_application_smartphone[1].jpg" alt="page acceuil" width="200" hspace="10"/>
+  <img src="assets/screenshots/logo_application_smartphone.jpg" alt="logo" width="200" hspace="10"/>
   <img src="assets/screenshots/page_acceuil.jpg" alt="page acceuil" width="200" hspace="10"/>
   <img src="assets/screenshots/affichage_cours.jpg" alt="cours" width="200" hspace="10"/>
   <img src="assets/screenshots/détails_cours.jpg" alt="détails des cours" width="200" hspace="10"/>
@@ -27,10 +27,10 @@ Consultez votre emploi du temps personnalisé, organisez des réunions entre ét
   <img src="assets/screenshots/organiser_des_réunions.jpg" alt="Organiser réunion" width="200" hspace="10"/>
   <img src="assets/screenshots/groupe_étudiant.jpg" alt="nombre membre du groupe" width="200" hspace="10"/>
   <img src="assets/screenshots/Affichage_des_créneaux.jpg" alt="Créneaux communs" width="200" hspace="10"/>
-  <img src="assets/screenshots/Affichage_creation_personnal_events.jpg" alt="nombre membre du groupe" width="200" hspace="10"/>
-  <img src="assets/screenshots/test_creation_personnal event.jpg" alt="nombre membre du groupe" width="200" hspace="10"/>
-  <img src="assets/screenshots/Affichage_personnal_event.jpg" alt="nombre membre du groupe" width="200" hspace="10"/>
-  <img src="assets/screenshots/Affichage_details_personnal_event.jpg" alt="nombre membre du groupe" width="200"/>
+  <img src="assets/screenshots/Affichage_creation_personnal_events.jpg" alt="Affichage formulaire création événement personnel" width="200" hspace="10"/>
+  <img src="assets/screenshots/test_creation_personnal event.jpg" alt="test création évenement personelle" width="200" hspace="10"/>
+  <img src="assets/screenshots/Affichage_personnal_event.jpg" alt="Affichage de l'événement personnel crée" width="200" hspace="10"/>
+  <img src="assets/screenshots/Affichage_details_personnal_event.jpg" alt="Affichage des détails de l'événément personel" width="200"/>
 </p>
 
 > **Astuce :** Ajoutez vos propres captures d’écran dans `assets/screenshots/` pour illustrer les dernières fonctionnalités.
