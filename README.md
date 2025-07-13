@@ -13,27 +13,33 @@ Consultez votre emploi du temps personnalisé, organisez des réunions entre ét
 - 🤝 **Organisation de réunions** : Trouvez facilement les créneaux communs libres entre plusieurs étudiants.
 - 🇫🇷 **Interface 100% française** : Dates et heures au format local, gestion du fuseau horaire (Nouméa).
 - 📱 **Design moderne** : Navigation fluide, cartes colorées, expérience utilisateur optimisée mobile.
+Voici une version nettement améliorée de ta section **"📸 Aperçu de l’application"**, avec :
 
 ---
 
 ## 📸 Aperçu de l’application
 
-<p align="center">
-  <img src="assets/screenshots/logo_application_smartphone.jpg" alt="logo" width="200" hspace="10"/>
-  <img src="assets/screenshots/page_acceuil.jpg" alt="page acceuil" width="200" hspace="10"/>
-  <img src="assets/screenshots/affichage_cours.jpg" alt="cours" width="200" hspace="10"/>
-  <img src="assets/screenshots/détails_cours.jpg" alt="détails des cours" width="200" hspace="10"/>
-  <img src="assets/screenshots/menu.jpg" alt="Détail événement" width="200" hspace="10"/>
-  <img src="assets/screenshots/organiser_des_réunions.jpg" alt="Organiser réunion" width="200" hspace="10"/>
-  <img src="assets/screenshots/groupe_étudiant.jpg" alt="nombre membre du groupe" width="200" hspace="10"/>
-  <img src="assets/screenshots/Affichage_des_créneaux.jpg" alt="Créneaux communs" width="200" hspace="10"/>
-  <img src="assets/screenshots/Affichage_creation_personnal_events.jpg" alt="Affichage formulaire création événement personnel" width="200" hspace="10"/>
-  <img src="assets/screenshots/test_creation_personnal event.jpg" alt="test création évenement personelle" width="200" hspace="10"/>
-  <img src="assets/screenshots/Affichage_personnal_event.jpg" alt="Affichage de l'événement personnel crée" width="200" hspace="10"/>
-  <img src="assets/screenshots/Affichage_details_personnal_event.jpg" alt="Affichage des détails de l'événément personel" width="200"/>
-</p>
+<div align="center">
 
-> **Astuce :** Ajoutez vos propres captures d’écran dans `assets/screenshots/` pour illustrer les dernières fonctionnalités.
+<img src="assets/screenshots/logo_application_smartphone.jpg" alt="Logo de l'application" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/page_acceuil.jpg" alt="Page d'accueil" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/affichage_cours.jpg" alt="Affichage des cours" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/détails_cours.jpg" alt="Détails d’un cours" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/menu.jpg" alt="Menu latéral" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/organiser_des_réunions.jpg" alt="Organiser une réunion" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/groupe_étudiant.jpg" alt="Groupe étudiant" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/Affichage_des_créneaux.jpg" alt="Créneaux communs" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/Affichage_creation_personnal_events.jpg" alt="Création événement personnel" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/test_creation_personnal event.jpg" alt="Test création événement personnel" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/Affichage_personnal_event.jpg" alt="Affichage événement personnel" width="200" style="margin: 10px;" />
+<img src="assets/screenshots/Affichage_details_personnal_event.jpg" alt="Détails événement personnel" width="200" style="margin: 10px;" />
+
+</div>
+
+---
+
+📥 **Télécharger l’application (Android uniquement)**
+👉 [Cliquez ici pour récupérer l’APK](https://drive.google.com/file/d/1pu8xpEkScE7waXez33QuJm3siK-jk1dH/view?usp=sharing)
 
 ---
 
